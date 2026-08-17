@@ -47,10 +47,17 @@ Ein Beispiel für diese Stufe: „${s.beispiel}“
 
 Für jede Frage brauchst du:
 - "q": die Frage nach einer Rangfolge, auf Deutsch, ohne die Zahl 5 zu erwähnen. Zum Beispiel: „Die einwohnerreichsten Städte Deutschlands“.
-- "unit": wonach sortiert wird, zwei bis vier Wörter. Zum Beispiel „Einwohner“ oder „Höhe über dem Meer“.
+- "unit": wonach sortiert wird, zwei bis fünf Wörter. Zum Beispiel „Einwohner“ oder „Höhe über dem Meer“.
 - "top": genau fünf Einträge in der KORREKTEN Reihenfolge, Platz 1 zuerst.
 - "decoys": genau fünf plausible Einträge, die sicher NICHT in die Top 5 gehören.
-- "note": ein kurzer deutscher Satz mit der entscheidenden Zahl oder Erklärung.
+- "values": zu JEDEM der zehn Einträge der Zahlenwert, nach dem sortiert wird — auch zu den Ablenkern. Schlüssel ist der Eintrag, exakt so geschrieben wie in "top" bzw. "decoys".
+- "note": ein kurzer deutscher Satz mit dem entscheidenden Detail. Keine bloße Wiederholung der Zahlen.
+
+Zu den Zahlenwerten:
+- Deutsche Schreibweise: Punkt als Tausendertrenner, Komma als Dezimalzeichen. Also „8.849 m“, „3,88 Mio.“, „17,4 %“.
+- Kurz halten, mit Einheit, höchstens zwölf Zeichen. Große Zahlen runden: „1,43 Mrd.“ statt „1.428.627.663“.
+- Alle zehn Werte in derselben Einheit und derselben Größenordnung, damit sie vergleichbar sind.
+- Die Werte müssen die Reihenfolge in "top" tatsächlich belegen und für die Ablenker klar außerhalb liegen.
 
 Unbedingt beachten:
 - Die Reihenfolge muss objektiv feststehen und gut belegt sein. Keine Geschmacksfragen, keine Umfragen, keine "beliebtesten" oder "besten".
@@ -61,7 +68,7 @@ Unbedingt beachten:
 - Die ${count} Fragen unterscheiden sich deutlich voneinander.${sperre}
 
 Antworte ausschließlich mit JSON, ohne Markdown, ohne Erklärung:
-{"rounds":[{"q":"...","unit":"...","top":["...","...","...","...","..."],"decoys":["...","...","...","...","..."],"note":"..."}]}`;
+{"rounds":[{"q":"...","unit":"...","top":["...","...","...","...","..."],"decoys":["...","...","...","...","..."],"values":{"Eintrag":"Wert"},"note":"..."}]}`;
 }
 
 function pruefe(r) {
@@ -71,11 +78,23 @@ function pruefe(r) {
   if (top.length !== 5 || decoys.length !== 5) return null;
   const alle = [...top, ...decoys].map(norm);
   if (new Set(alle).size !== 10) return null;
+
+  // Zahlenwerte einsammeln. Fehlt einer, bleibt das Feld leer — deswegen
+  // ist die Runde nicht unbrauchbar, sie zeigt dann nur einen Strich.
+  const roh = (r.values && typeof r.values === "object") ? r.values : {};
+  const suche = new Map(Object.keys(roh).map(k => [norm(k), roh[k]]));
+  const values = {};
+  for (const name of [...top, ...decoys]) {
+    const v = suche.get(norm(name));
+    if (v != null && String(v).trim()) values[name] = String(v).trim().slice(0, 24);
+  }
+
   return {
     q: r.q.trim(),
     unit: String(r.unit || "").trim(),
     top,
     decoys,
+    values,
     note: String(r.note || "").trim()
   };
 }
@@ -114,7 +133,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         // Für die Richtigkeit der Listen lohnt sich das stärkere Modell.
         model: "claude-sonnet-4-6",
-        max_tokens: 2500,
+        max_tokens: 4000,
         temperature: 1,
         messages: [{ role: "user", content: baueAufgabe(count + 2, thema, stufe, avoid) }]
       })
