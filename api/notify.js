@@ -2,7 +2,7 @@
 // Braucht die Environment-Variable FIREBASE_SERVICE_ACCOUNT (kompletter
 // JSON-Inhalt des Dienstkonto-Schlüssels aus der Firebase Console).
 //
-// Diese Fassung kennt zusätzlich die Meldungen des Ranglisten-Spiels.
+// Diese Fassung kennt zusätzlich die Meldungen von List Duell.
 // Sie ist abwärtskompatibel: die Imposter-Meldungen sind unverändert,
 // die Datei kann in beiden Projekten identisch liegen.
 
@@ -36,7 +36,7 @@ function baueNachricht(kind, from, extra = {}) {
     case "finished":
       return { title: "Runde beendet", body: `${from} hat getippt. Schau dir das Ergebnis an.`, tag: "game" };
 
-    /* ---------- Rangliste ---------- */
+    /* ---------- List Duell ---------- */
     case "listchallenge":
       return { title: "Herausforderung", body: `${from} fordert dich zu fünf Runden heraus.`, tag: "listchallenge" };
     case "listaccepted":
