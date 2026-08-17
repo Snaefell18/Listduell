@@ -1,0 +1,2701 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Rangliste</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#10122B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rangliste">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10122B;
+    --ink-2:#1A1E42;
+    --ink-3:#262C5C;
+    --line:rgba(239,237,247,.14);
+    --paper:#EFEDF7;
+    --paper-2:#D8D5EA;
+    --muted:#9AA0CC;
+    --yellow:#FFC93C;
+    --magenta:#F2557F;
+    --ok:#4FD6C0;
+    --r:18px;
+    --display:"Bricolage Grotesque", system-ui, sans-serif;
+    --body:"DM Sans", system-ui, sans-serif;
+    --mono:"DM Mono", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(120% 80% at 50% -10%, #262C5C 0%, transparent 60%),
+      var(--ink);
+    color:var(--paper);
+    font-family:var(--body);
+    -webkit-font-smoothing:antialiased;
+    min-height:100dvh;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:22px 18px calc(34px + env(safe-area-inset-bottom))}
+  .screen{display:none;animation:rise .35s cubic-bezier(.2,.8,.2,1)}
+  .screen.on{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* ---------- Typografie ---------- */
+  h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.02em;line-height:1.02}
+  h1{font-size:2.55rem;font-weight:800}
+  h2{font-size:1.5rem;font-weight:700}
+  h3{font-size:1.05rem;font-weight:700}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  p{line-height:1.55;color:#CFCEE4;margin:.5rem 0}
+  .dim{color:var(--muted);font-size:.9rem}
+
+  /* ---------- Flächen ---------- */
+  .card{background:var(--ink-2);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+  .card + .card{margin-top:12px}
+  .stack{margin-top:22px}
+
+  /* ---------- Knöpfe ---------- */
+  button{font-family:var(--body);font-size:1rem;cursor:pointer;border:0;transition:transform .12s ease, filter .15s ease}
+  button:active{transform:scale(.975)}
+  button:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px 18px;border-radius:14px;font-weight:700;background:var(--paper);color:var(--ink)}
+  .btn.ghost{background:transparent;color:var(--paper);border:1px solid var(--line)}
+  .btn.yellow{background:var(--yellow);color:#2A1D00}
+  .btn.magenta{background:var(--magenta);color:#fff}
+  .btn:disabled{opacity:.42;cursor:not-allowed}
+  .btn.sm{width:auto;padding:10px 14px;font-size:.9rem;border-radius:11px}
+
+  /* ---------- Eingaben ---------- */
+  input[type=text]{
+    width:100%;padding:14px 15px;border-radius:13px;border:1px solid var(--line);
+    background:var(--ink);color:var(--paper);font-family:var(--body);font-size:1rem
+  }
+  input[type=text]:focus{outline:2px solid var(--yellow);outline-offset:1px}
+  label{display:block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .row{display:flex;gap:10px;align-items:center}
+  select{
+    width:100%;padding:14px 44px 14px 15px;border-radius:13px;border:1px solid var(--line);
+    background:var(--ink);color:var(--paper);font-family:var(--body);font-size:1rem;
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239AA0CC' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center;background-size:18px
+  }
+  select:focus{outline:2px solid var(--yellow);outline-offset:1px}
+  select option{background:var(--ink-2);color:var(--paper)}
+
+  /* ---------- Avatar ---------- */
+  .ava{width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--ink-3);flex:0 0 auto;border:1px solid var(--line)}
+  .ava.lg{width:96px;height:96px}
+  .ava.xl{width:64px;height:64px}
+  .avaWrap{position:relative;display:inline-block;line-height:0;flex:0 0 auto;isolation:isolate}
+  .avaWrap .ava{position:relative;z-index:1;display:block}
+  .avaLink{background:none;border:0;padding:0;line-height:0;cursor:pointer;flex:0 0 auto;border-radius:50%}
+  .avaLink:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+  .avaWrap::before{content:"";position:absolute;inset:-4px;border-radius:50%;z-index:0;display:none}
+  .avaBadge{
+    position:absolute;right:-2px;bottom:-2px;z-index:2;
+    width:20px;height:20px;border-radius:50%;
+    background:var(--ink);border:1px solid var(--line);
+    display:grid;place-items:center;font-size:11px;line-height:1
+  }
+  .avaWrap.xl .avaBadge{width:25px;height:25px;font-size:14px}
+  .avaWrap.lg .avaBadge{width:33px;height:33px;font-size:19px;right:2px;bottom:2px}
+  /* Rahmen aus dem Imposter-Katalog */
+  .fr-gold  .ava{border-color:#FFC93C;box-shadow:0 0 0 3px rgba(255,201,60,.3)}
+  .fr-rose  .ava{border-color:#F2557F;box-shadow:0 0 0 3px rgba(242,85,127,.3)}
+  .fr-mint  .ava{border-color:#4FD6C0;box-shadow:0 0 0 3px rgba(79,214,192,.3)}
+  .fr-paper .ava{border-color:#EFEDF7;box-shadow:0 0 0 3px rgba(239,237,247,.22)}
+  .fr-sunset::before{display:block;background:conic-gradient(#FFC93C,#F2557F,#FFC93C)}
+  .fr-ocean::before {display:block;background:conic-gradient(#4FD6C0,#1A1E42,#4FD6C0)}
+  .fr-royal::before {display:block;background:conic-gradient(#FFC93C,#EFEDF7,#F2557F,#FFC93C);animation:spinFrame 5s linear infinite}
+  .fr-champion::before{display:block;background:conic-gradient(#FFC93C,#FFFFFF,#FFC93C)}
+  .fr-legend::before  {display:block;background:conic-gradient(#FFC93C,#F2557F,#4FD6C0,#FFC93C);animation:spinFrame 7s linear infinite}
+  .fr-inferno::before {display:block;background:conic-gradient(#FF4D1C,#FFC93C,#F2557F,#FF4D1C);animation:spinFrame 3.5s linear infinite}
+  .fr-veteran::before {display:block;background:conic-gradient(#4FD6C0,#EFEDF7,#4FD6C0)}
+  .fr-psychic::before {display:block;background:conic-gradient(#9B5DE5,#F2557F,#9B5DE5);animation:spinFrame 9s linear infinite}
+  /* Rahmen, die es nur hier gibt */
+  .fr-bronze .ava{border-color:#C97B3C;box-shadow:0 0 0 3px rgba(201,123,60,.32)}
+  .fr-silber .ava{border-color:#C9CEE4;box-shadow:0 0 0 3px rgba(201,206,228,.3)}
+  .fr-platin::before{display:block;background:conic-gradient(#E9EEF7,#8FA2C4,#E9EEF7)}
+  .fr-neon::before{display:block;background:conic-gradient(#37F2C1,#4C6BFF,#F2557F,#37F2C1);animation:spinFrame 4s linear infinite}
+  .fr-rangkrone::before{display:block;background:conic-gradient(#FFC93C,#FFE9A8,#C97B3C,#FFC93C);animation:spinFrame 6s linear infinite}
+  .fr-perfektion::before{display:block;background:conic-gradient(#4FD6C0,#FFC93C,#EFEDF7,#4FD6C0);animation:spinFrame 8s linear infinite}
+  @keyframes spinFrame{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.avaWrap::before{animation:none!important}}
+
+  /* ---------- Listenzeilen ---------- */
+  .row-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+  .row-item:first-child{border-top:0}
+  .row-item .name{font-weight:700;font-size:1rem}
+  .row-item .sub{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+  .grow{flex:1;min-width:0}
+  .name,.sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .record{font-family:var(--mono);font-size:.8rem;letter-spacing:.02em}
+  .record .w{color:var(--ok)}
+  .record .d{color:var(--muted)}
+  .record .l{color:var(--magenta)}
+  .record .sep{color:var(--line);margin:0 3px}
+
+  /* ---------- Shop, Inventar ---------- */
+  .goldbar{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    background:linear-gradient(160deg,rgba(255,201,60,.16),rgba(255,201,60,.05));
+    border:1px solid rgba(255,201,60,.42);border-radius:var(--r);padding:18px;margin-top:18px
+  }
+  .goldbar .amt{font-family:var(--display);font-weight:800;font-size:2.2rem;color:var(--yellow);letter-spacing:-.02em}
+  .goldbar .lbl{font-family:var(--mono);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .shopgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  .item{
+    background:var(--ink);border:1px solid var(--line);border-radius:15px;
+    padding:12px 6px 10px;text-align:center;color:var(--paper);display:block;width:100%;position:relative
+  }
+  .item .prev{font-size:1.75rem;line-height:1;margin-bottom:7px}
+  .item .nm{font-size:.78rem;font-weight:700;line-height:1.2;display:block}
+  .item .pr{font-family:var(--mono);font-size:.68rem;color:var(--yellow);margin-top:4px;display:block}
+  .item.owned{opacity:.55}
+  .item.owned .pr{color:var(--muted)}
+  .item.poor .pr{color:var(--magenta)}
+  .item.sel{border-color:var(--yellow);background:rgba(255,201,60,.14)}
+  .item.exclusive{border-color:rgba(79,214,192,.5)}
+  .item .only{
+    position:absolute;top:5px;right:5px;font-family:var(--mono);font-size:.5rem;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--ok)
+  }
+  .ring{width:44px;height:44px;border-radius:50%;margin:0 auto 7px;background:var(--ink-3)}
+
+  /* ---------- Trophäen ---------- */
+  .tro{display:flex;gap:13px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+  .tro:first-child{border-top:0}
+  .tro-ic{
+    flex:0 0 auto;width:46px;height:46px;border-radius:13px;background:var(--ink);
+    border:1px solid var(--line);display:grid;place-items:center;font-size:1.45rem;
+    filter:grayscale(1);opacity:.4
+  }
+  .tro.done .tro-ic{filter:none;opacity:1;background:rgba(255,201,60,.14);border-color:rgba(255,201,60,.5)}
+  .tro-nm{font-weight:700;font-size:.97rem}
+  .tro-tx{font-size:.8rem;color:var(--muted);margin-top:1px}
+  .bar{height:5px;border-radius:999px;background:var(--ink);margin-top:7px;overflow:hidden}
+  .bar > i{display:block;height:100%;background:var(--yellow);border-radius:999px}
+  .tro-pick{
+    flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);
+    background:var(--ink);color:var(--muted);display:grid;place-items:center;font-size:.85rem
+  }
+  .tro-pick.on{background:var(--yellow);border-color:var(--yellow);color:#2A1D00;font-weight:700}
+  .unlocknote{font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;color:var(--yellow);margin-top:4px}
+  .trophyline{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:.95rem}
+  .trophyline .ic{font-size:1.2rem}
+
+  /* ---------- Spielbrett ---------- */
+  .rndbar{display:flex;gap:6px;margin-bottom:14px}
+  .rndbar i{
+    flex:1;height:6px;border-radius:999px;background:var(--ink-2);
+    border:1px solid var(--line);display:block
+  }
+  .rndbar i.done{background:var(--muted);border-color:transparent}
+  .rndbar i.now{background:var(--yellow);border-color:transparent}
+
+  .duel{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 14px}
+  .duel .vs{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--muted)}
+  .configpill{display:flex;justify-content:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .pill{display:inline-block;font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;padding:5px 9px;border-radius:999px;background:var(--ink-3);color:var(--muted)}
+  .pill.live{background:rgba(79,214,192,.16);color:var(--ok)}
+
+  .quest{
+    background:linear-gradient(165deg,var(--ink-3),var(--ink-2));
+    border:1px solid var(--line);border-radius:var(--r);padding:18px;text-align:center
+  }
+  .quest .q{font-family:var(--display);font-weight:800;font-size:1.35rem;letter-spacing:-.02em;line-height:1.15}
+  .quest .u{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+
+  .slots{margin-top:16px;display:flex;flex-direction:column;gap:8px}
+  .slot{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+    background:var(--ink);border:1px dashed var(--line);border-radius:14px;
+    padding:12px 14px;color:var(--paper);min-height:54px
+  }
+  .slot.filled{border-style:solid;border-color:rgba(255,201,60,.55);background:rgba(255,201,60,.09)}
+  .slot .rk{
+    flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--ink-3);
+    color:var(--muted);font-family:var(--display);font-weight:800;font-size:.95rem;
+    display:grid;place-items:center
+  }
+  .slot.filled .rk{background:var(--yellow);color:#2A1D00}
+  .slot .val{flex:1;min-width:0;font-weight:700;font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .slot .empty-t{flex:1;color:var(--muted);font-size:.92rem}
+  .slot .x{flex:0 0 auto;color:var(--muted);font-size:1.1rem;line-height:1}
+  .slot.next{border-color:var(--yellow)}
+
+  .opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .chip{
+    background:var(--ink);border:1px solid var(--line);border-radius:999px;
+    padding:10px 15px;color:var(--paper);font-size:.94rem;font-weight:600;line-height:1.1
+  }
+  .chip.used{opacity:.28;text-decoration:line-through}
+  .chip:not(.used):hover{border-color:var(--muted)}
+
+  /* ---------- Auflösung ---------- */
+  .rev{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+  .rev:first-child{border-top:0}
+  .rev .rk{
+    flex:0 0 auto;width:28px;height:28px;border-radius:9px;background:var(--ink-3);
+    color:var(--paper);font-family:var(--display);font-weight:800;font-size:1rem;
+    display:grid;place-items:center;margin-top:2px
+  }
+  .rev .sol{font-family:var(--display);font-weight:700;font-size:1.1rem;letter-spacing:-.01em}
+  .picks{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+  .pk{display:flex;align-items:center;gap:7px;font-size:.86rem;color:#CFCEE4}
+  .pk .who{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);width:52px;flex:0 0 auto}
+  .pk .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pk .p{font-family:var(--mono);font-size:.72rem;flex:0 0 auto}
+  .pk .p.p10{color:var(--ok)}
+  .pk .p.p5{color:var(--yellow)}
+  .pk .p.p0{color:var(--muted)}
+
+  .duelscore{display:flex;gap:10px;margin-top:14px}
+  .duelscore > div{
+    flex:1;background:var(--ink);border:1px solid var(--line);border-radius:14px;
+    padding:14px 10px;text-align:center
+  }
+  .duelscore .n{font-family:var(--display);font-weight:800;font-size:2rem;letter-spacing:-.02em}
+  .duelscore .l{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .duelscore .win{border-color:rgba(79,214,192,.5);background:rgba(79,214,192,.1)}
+  .duelscore .win .n{color:var(--ok)}
+
+  .verdict{text-align:center;padding:26px 18px;border-radius:var(--r);border:1px solid var(--line);position:relative}
+  .verdict.win{background:rgba(79,214,192,.12);border-color:rgba(79,214,192,.4)}
+  .verdict.lose{background:rgba(242,85,127,.12);border-color:rgba(242,85,127,.4)}
+  .verdict.draw{background:rgba(255,201,60,.1);border-color:rgba(255,201,60,.4)}
+  .verdict .big{font-family:var(--display);font-weight:800;font-size:2rem;letter-spacing:-.02em}
+
+  .rtable{margin-top:14px}
+  .rrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:.92rem}
+  .rrow:first-child{border-top:0}
+  .rrow .n{font-family:var(--mono);font-size:.7rem;color:var(--muted);width:52px;flex:0 0 auto}
+  .rrow .q{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#CFCEE4}
+  .rrow .s{font-family:var(--mono);font-size:.82rem;flex:0 0 auto}
+  .rrow .s b{color:var(--paper)}
+  .rrow.mewin .s b:first-child{color:var(--ok)}
+  .rrow.oppwin .s b:last-child{color:var(--magenta)}
+
+  .statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .stat{background:var(--ink);border:1px solid var(--line);border-radius:14px;padding:14px 10px;text-align:center}
+  .stat .n{font-family:var(--display);font-weight:800;font-size:1.8rem;letter-spacing:-.02em}
+  .stat .l{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+
+  .levels{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+  .level{
+    border:1px solid var(--line);background:var(--ink);border-radius:13px;
+    padding:12px 6px;text-align:center;color:var(--paper);opacity:.62
+  }
+  .level .n{font-family:var(--display);font-weight:800;font-size:1.3rem;line-height:1}
+  .level .t{font-family:var(--mono);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;margin-top:5px;color:var(--muted)}
+  .level.on{opacity:1;border-color:var(--yellow);background:rgba(255,201,60,.14)}
+  .level.on .t{color:var(--yellow)}
+
+  .spinner{width:26px;height:26px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--yellow);animation:spin .8s linear infinite;margin:0 auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  #toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,140%);
+    background:var(--paper);color:var(--ink);padding:12px 18px;border-radius:999px;
+    font-weight:700;font-size:.9rem;max-width:88vw;text-align:center;z-index:99;
+    transition:transform .3s cubic-bezier(.2,.8,.2,1);box-shadow:0 12px 30px -12px rgba(0,0,0,.8)
+  }
+  #toast.on{transform:translate(-50%,0)}
+
+  .iconbtn{
+    flex:0 0 auto;width:42px;height:42px;border-radius:50%;
+    background:var(--ink-2);border:1px solid var(--line);color:var(--muted);
+    display:grid;place-items:center
+  }
+  .iconbtn:hover{color:var(--paper);border-color:var(--muted)}
+  .iconbtn.box{width:auto;height:auto;padding:10px 12px;border-radius:11px}
+  .switch{
+    flex:0 0 auto;width:54px;height:31px;border-radius:999px;padding:3px;
+    background:var(--ink);border:1px solid var(--line);position:relative;
+    transition:background .2s ease,border-color .2s ease
+  }
+  .switch .knob{
+    display:block;width:23px;height:23px;border-radius:50%;background:var(--muted);
+    transition:transform .22s cubic-bezier(.4,1.3,.5,1),background .2s ease
+  }
+  .switch.on{background:rgba(255,201,60,.22);border-color:var(--yellow)}
+  .switch.on .knob{transform:translateX(23px);background:var(--yellow)}
+  .switch:disabled{opacity:.4}
+
+  .step-n{
+    font-family:var(--display);font-weight:800;font-size:1.05rem;
+    width:28px;height:28px;border-radius:50%;background:var(--yellow);color:#2A1D00;
+    display:grid;place-items:center;margin-bottom:9px
+  }
+
+  /* ---------- Installationshinweis ---------- */
+  .install{
+    display:flex;gap:12px;align-items:flex-start;
+    background:linear-gradient(160deg,rgba(255,201,60,.14),rgba(255,201,60,.04));
+    border:1px solid rgba(255,201,60,.4);border-radius:var(--r);
+    padding:14px 14px 14px 15px;margin-bottom:16px
+  }
+  .install img{width:38px;height:38px;border-radius:10px;flex:0 0 auto}
+  .install .tt{font-weight:700;font-size:.95rem}
+  .install .bd{font-size:.85rem;color:#CFCEE4;margin-top:3px;line-height:1.45}
+  .install .x{
+    flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:transparent;
+    color:var(--muted);font-size:1.1rem;line-height:1;display:grid;place-items:center;margin:-3px -4px 0 0
+  }
+  .install .x:hover{color:var(--paper)}
+  .install .go{
+    margin-top:10px;padding:9px 14px;border-radius:11px;background:var(--yellow);
+    color:#2A1D00;font-weight:700;font-size:.88rem
+  }
+  .share{display:inline-block;vertical-align:-2px;color:var(--yellow)}
+
+  /* ---------- Login ---------- */
+  .brand{text-align:center;padding-top:8vh}
+  .logo{width:104px;height:104px;margin:0 auto;display:block;filter:drop-shadow(0 18px 34px rgba(0,0,0,.55))}
+  .wordmark{font-family:var(--display);font-weight:800;font-size:clamp(2.7rem,13vw,3.9rem);letter-spacing:-.045em;line-height:1;margin-top:18px}
+  .slogan{font-family:var(--mono);font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-top:12px;line-height:1.9}
+  .slogan b{color:var(--yellow);font-weight:400}
+  .authbtn{
+    display:flex;align-items:center;justify-content:center;gap:11px;width:100%;
+    padding:15px 18px;border-radius:14px;font-weight:700;font-size:1rem;margin-top:10px
+  }
+  .authbtn svg{flex:0 0 auto}
+  .auth-google{background:#fff;color:#1B1B1B}
+  .auth-apple{background:#000;color:#fff}
+  .auth-mail{background:transparent;color:var(--paper);border:1px solid var(--line)}
+  .authsep{display:flex;align-items:center;gap:12px;margin:20px 0 4px;font-family:var(--mono);font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  .authsep::before,.authsep::after{content:"";flex:1;height:1px;background:var(--line)}
+  #mailPanel{margin-top:14px}
+  #mailPanel input{margin-bottom:9px}
+  .tabs{display:flex;gap:6px;background:var(--ink);border:1px solid var(--line);border-radius:13px;padding:4px;margin-bottom:12px}
+  .tabs button{flex:1;padding:9px;border-radius:9px;background:transparent;color:var(--muted);font-weight:700;font-size:.88rem}
+  .tabs button.on{background:var(--ink-3);color:var(--paper)}
+
+  /* ---------- Intro ---------- */
+  #splash{
+    position:fixed;inset:0;z-index:200;display:grid;place-items:center;
+    background:radial-gradient(120% 90% at 50% 40%, #262C5C 0%, #10122B 62%);
+    padding:24px;text-align:center;
+    animation:splashOut 2.9s cubic-bezier(.6,.05,.2,1) forwards;
+  }
+  @keyframes splashOut{0%,82%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden;transform:scale(1.06)}}
+  #splash .s-eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.5em;text-transform:uppercase;color:var(--muted);opacity:0;animation:sFade .7s .15s ease forwards}
+  #splash .s-mask{overflow:hidden;padding:2px 0 8px}
+  #splash .s-word{
+    font-family:var(--display);font-weight:800;letter-spacing:-.045em;line-height:1;
+    font-size:clamp(2.8rem,15vw,5rem);color:var(--yellow);
+    transform:translateY(105%);animation:sRise .85s .35s cubic-bezier(.16,1,.3,1) forwards
+  }
+  #splash .s-rule{height:2px;width:0;margin:6px auto 14px;background:var(--magenta);animation:sRule .7s .95s cubic-bezier(.5,0,.2,1) forwards}
+  #splash .s-sub{font-family:var(--body);font-size:1.02rem;color:#CFCEE4;opacity:0;animation:sFade .8s 1.15s ease forwards}
+  @keyframes sFade{to{opacity:1}}
+  @keyframes sRise{to{transform:translateY(0)}}
+  @keyframes sRule{to{width:min(230px,62vw)}}
+  #splash.skip{animation:splashOut .28s forwards}
+  @media (prefers-reduced-motion:reduce){
+    #splash{animation:splashOut 2.2s steps(1,end) forwards}
+    #splash .s-eyebrow,#splash .s-word,#splash .s-rule,#splash .s-sub{animation:none;opacity:1;transform:none;width:auto}
+    #splash .s-rule{width:min(230px,62vw)}
+  }
+
+  /* ---------- Sieganimation ---------- */
+  #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:80;display:none}
+  #fx.on{display:block}
+  .verdict.pop{animation:pop .62s cubic-bezier(.16,1.3,.3,1) both}
+  @keyframes pop{
+    0%{transform:scale(.72) rotate(-2.5deg);opacity:0}
+    55%{transform:scale(1.05) rotate(1deg);opacity:1}
+    100%{transform:scale(1) rotate(0);opacity:1}
+  }
+  .burst{
+    position:absolute;left:50%;top:-6px;transform:translateX(-50%);
+    font-family:var(--display);font-weight:800;font-size:2.6rem;color:var(--yellow);
+    text-shadow:0 6px 24px rgba(255,201,60,.55);pointer-events:none;opacity:0
+  }
+  .burst.go{animation:burstUp 1.6s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes burstUp{
+    0%{opacity:0;transform:translate(-50%,14px) scale(.5)}
+    22%{opacity:1;transform:translate(-50%,-14px) scale(1.18)}
+    45%{transform:translate(-50%,-20px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-64px) scale(.96)}
+  }
+
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .link{background:none;border:0;color:var(--muted);font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;padding:6px 0}
+  .link:hover{color:var(--paper)}
+  .empty{padding:18px 4px;text-align:center;color:var(--muted);font-size:.9rem}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div id="splash">
+  <div>
+    <div class="s-eyebrow">Fünf Plätze</div>
+    <div class="s-mask"><div class="s-word">Rangliste</div></div>
+    <div class="s-rule"></div>
+    <div class="s-sub">und nur eine richtige Reihenfolge</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- LADEN -->
+  <section id="screen-loading" class="screen on">
+    <div style="padding:32vh 0 0"><div class="spinner"></div></div>
+  </section>
+
+  <!-- ANMELDUNG -->
+  <section id="screen-auth" class="screen">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="14" y="66" width="30" height="38" rx="6" fill="#262C5C" stroke="#9AA0CC" stroke-width="2.5"/>
+        <rect x="45" y="40" width="30" height="64" rx="6" fill="#1A1E42" stroke="#FFC93C" stroke-width="3"/>
+        <rect x="76" y="80" width="30" height="24" rx="6" fill="#262C5C" stroke="#9AA0CC" stroke-width="2.5"/>
+        <circle cx="60" cy="22" r="11" fill="#FFC93C"/>
+        <path d="M53.5 22.5l4.5 4.5 8.5-9" stroke="#2A1D00" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="52" y="56" width="16" height="4" rx="2" fill="#FFC93C" opacity=".55"/>
+        <rect x="21" y="80" width="16" height="4" rx="2" fill="#9AA0CC" opacity=".5"/>
+        <rect x="83" y="90" width="16" height="4" rx="2" fill="#9AA0CC" opacity=".5"/>
+      </svg>
+      <h1 class="wordmark">Rangliste</h1>
+      <p class="slogan">Fünf Plätze<br><b>und nur eine richtige Reihenfolge</b></p>
+    </div>
+
+    <div class="stack">
+      <button class="authbtn auth-google" id="btnGoogle">
+        <svg width="19" height="19" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.8-6.8C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.2 5.3-4.7 7l7.6 5.9c4.4-4.1 6.8-10.1 6.8-17.4z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.5 0 20.1 0 24s1 7.5 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.8 2.3-8.3 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.2C6.5 42.6 14.6 48 24 48z"/></svg>
+        Mit Google anmelden
+      </button>
+
+      <button class="authbtn auth-apple hidden" id="btnApple">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c-.02-2.35 1.92-3.48 2.01-3.53-1.1-1.6-2.8-1.82-3.4-1.85-1.45-.15-2.83.85-3.56.85-.74 0-1.87-.83-3.07-.81-1.58.02-3.04.92-3.85 2.33-1.64 2.85-.42 7.06 1.18 9.37.78 1.13 1.71 2.4 2.93 2.35 1.18-.05 1.62-.76 3.05-.76 1.42 0 1.82.76 3.06.74 1.26-.02 2.06-1.15 2.83-2.29.89-1.31 1.26-2.58 1.28-2.65-.03-.01-2.45-.94-2.47-3.75zM14.7 5.6c.65-.79 1.09-1.88.97-2.97-.94.04-2.07.62-2.74 1.41-.6.7-1.13 1.82-.99 2.89 1.05.08 2.11-.53 2.76-1.33z"/></svg>
+        Mit Apple anmelden
+      </button>
+
+      <button class="authbtn auth-mail" id="btnMailToggle">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M3 6.5l9 6 9-6"/></svg>
+        Mit E-Mail anmelden
+      </button>
+
+      <div id="mailPanel" class="card hidden">
+        <div class="tabs" id="mailTabs">
+          <button data-tab="in" class="on">Anmelden</button>
+          <button data-tab="up">Registrieren</button>
+        </div>
+        <input type="text" id="mailAddr" placeholder="E-Mail" autocomplete="email" inputmode="email" />
+        <input type="text" id="mailPass" placeholder="Passwort" autocomplete="current-password" />
+        <button class="btn yellow" id="btnMailGo" style="margin-top:5px">Anmelden</button>
+        <button class="link" id="btnMailReset" style="width:100%;margin-top:8px">Passwort vergessen</button>
+      </div>
+
+      <div class="authsep" id="guestSep">oder</div>
+      <button class="link" id="btnGuest" style="width:100%">Ohne Konto ausprobieren</button>
+      <p class="dim" style="text-align:center;font-size:.8rem;margin-top:18px">
+        Dein Konto, dein Gold und deine Freunde sind dieselben wie bei Imposter.
+      </p>
+    </div>
+  </section>
+
+  <!-- PROFIL ANLEGEN -->
+  <section id="screen-onboarding" class="screen">
+    <div class="eyebrow">Schritt 1 von 1</div>
+    <h1 style="margin-top:10px">Dein Profil</h1>
+
+    <div class="card stack">
+      <label>Profilbild</label>
+      <div class="row" style="gap:14px">
+        <img id="obAva" class="ava lg" alt="" />
+        <div class="grow">
+          <button class="btn ghost sm" id="obPickPhoto">Bild wählen</button>
+          <p class="dim" style="margin-top:8px;font-size:.8rem">Wird auf 256 px verkleinert und im Profil gespeichert.</p>
+        </div>
+      </div>
+      <input type="file" id="obFile" accept="image/*" class="hidden" />
+    </div>
+
+    <div class="card">
+      <label for="obUsername">Benutzername</label>
+      <input type="text" id="obUsername" placeholder="z. B. jan_niklas" autocomplete="off" maxlength="16" />
+      <p class="dim" style="font-size:.8rem">3–16 Zeichen, Buchstaben, Zahlen und Unterstrich. Einmalig vergeben — darüber finden dich deine Freunde.</p>
+    </div>
+
+    <div class="stack">
+      <button class="btn yellow" id="obSave">Profil anlegen</button>
+      <button class="link" id="obSignOut" style="width:100%;margin-top:10px">Abmelden</button>
+    </div>
+  </section>
+
+  <!-- MENÜ -->
+  <section id="screen-home" class="screen">
+    <div class="head">
+      <span id="homeAvaBox"></span>
+      <div class="grow">
+        <div class="eyebrow">Angemeldet als</div>
+        <h2 id="homeName" style="margin-top:4px">—</h2>
+      </div>
+      <button class="iconbtn" id="btnOptions" aria-label="Optionen">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3.2"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="install hidden" id="installCard">
+      <img src="/icons/icon-192.png" alt="" />
+      <div class="grow">
+        <div class="tt">Auf den Home-Bildschirm legen</div>
+        <div class="bd" id="installText">—</div>
+        <button class="go hidden" id="installGo">Installieren</button>
+      </div>
+      <button class="x" id="installX" aria-label="Hinweis ausblenden">×</button>
+    </div>
+
+    <div id="resumeCard" class="card hidden" style="border-color:rgba(79,214,192,.45);background:rgba(79,214,192,.07)">
+      <div class="eyebrow" style="color:var(--ok)">Laufendes Spiel</div>
+      <p style="margin:8px 0 12px" id="resumeText">—</p>
+      <button class="btn sm yellow" id="btnResume">Weiterspielen</button>
+    </div>
+
+    <div id="invitesCard" class="card hidden" style="border-color:rgba(255,201,60,.45);background:rgba(255,201,60,.07)">
+      <div class="eyebrow" style="color:var(--yellow)">Herausforderung</div>
+      <div id="invitesList" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h3>Freunde</h3>
+        <span class="pill" id="friendCount">0</span>
+      </div>
+      <div id="friendList" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:14px">
+        <input type="text" id="addUsername" placeholder="Benutzername" autocomplete="off" />
+        <button class="btn sm yellow" id="btnAddFriend" style="flex:0 0 auto">Hinzufügen</button>
+      </div>
+    </div>
+
+    <div class="stack">
+      <button class="btn yellow" id="btnShop">Item-Shop</button>
+      <div style="height:10px"></div>
+      <button class="btn ghost" id="btnTrophies">Trophäen</button>
+      <div style="height:10px"></div>
+      <button class="btn ghost" id="btnTutorial">Tutorial</button>
+      <div style="height:10px"></div>
+      <button class="btn ghost" id="btnStats">Statistiken</button>
+      <button class="link" id="btnSignOut" style="width:100%;margin-top:14px">Abmelden</button>
+    </div>
+  </section>
+
+  <!-- TUTORIAL -->
+  <section id="screen-tutorial" class="screen">
+    <div class="head"><button class="link" id="btnTutorialBack">← Menü</button></div>
+    <h1>So läuft ein Spiel</h1>
+
+    <div class="card stack">
+      <div class="step-n">1</div>
+      <h3>Herausfordern</h3>
+      <p>Such dir einen Freund aus der Liste. <strong>Herausfordern</strong> startet sofort, das <strong>Zahnrad</strong> daneben lässt dich Themenbereich und Schwierigkeit wählen. Dein Gegner muss annehmen.</p>
+    </div>
+
+    <div class="card">
+      <div class="step-n">2</div>
+      <h3>Fünf Runden, dieselbe Liste</h3>
+      <p>Jede Runde stellt eine Frage nach einer Reihenfolge — etwa <em>„Die einwohnerreichsten Städte Deutschlands“</em>. Ihr beide bekommt dieselbe Frage und dieselben zehn Vorschläge.</p>
+    </div>
+
+    <div class="card">
+      <div class="step-n">3</div>
+      <h3>Plätze füllen</h3>
+      <p>Von den zehn Vorschlägen gehören nur fünf in die Top 5 — der Rest sind Ablenker. Tippe einen Vorschlag an, um ihn auf den nächsten freien Platz zu setzen. Ein Tipp auf den Platz nimmt ihn wieder herunter.</p>
+    </div>
+
+    <div class="card">
+      <div class="step-n">4</div>
+      <h3>Punkte</h3>
+      <p>Genau richtiger Platz: <strong>10 Punkte</strong>. Einen Platz daneben: <strong>5 Punkte</strong>. Alles andere: nichts. Macht höchstens <strong>50 Punkte</strong> pro Runde.</p>
+      <p style="font-size:.92rem">Ihr tippt unabhängig voneinander. Erst wenn beide abgegeben haben, wird aufgelöst — vorher sieht keiner die Lösung.</p>
+    </div>
+
+    <div class="card">
+      <div class="step-n">5</div>
+      <h3>Wer gewinnt</h3>
+      <p>Wer in einer Runde mehr Punkte hat, gewinnt die Runde. Nach fünf Runden gewinnt, wer mehr Runden für sich entschieden hat. Bei Gleichstand zählen die <strong>Gesamtpunkte</strong> über alle fünf Runden.</p>
+    </div>
+
+    <div class="card">
+      <div class="step-n">6</div>
+      <h3>Gold</h3>
+      <p>Jede gewonnene Runde bringt <strong>4 Gold</strong>, eine perfekte Runde mit 50 Punkten zusätzlich <strong>5 Gold</strong>, der Spielsieg <strong>12 Gold</strong>. Das Gold ist dasselbe wie bei Imposter — was du hier verdienst, kannst du auch dort ausgeben.</p>
+    </div>
+
+    <div class="stack"><button class="btn" id="btnTutorialDone">Verstanden</button></div>
+  </section>
+
+  <!-- OPTIONEN -->
+  <section id="screen-options" class="screen">
+    <div class="head"><button class="link" id="btnOptionsBack">← Menü</button></div>
+    <h1>Optionen</h1>
+
+    <div class="card stack">
+      <label>Profilbild</label>
+      <div class="row" style="gap:14px">
+        <img id="optAva" class="ava lg" alt="" />
+        <div class="grow">
+          <button class="btn ghost sm" id="optPickPhoto">Neues Bild wählen</button>
+          <p class="dim" style="margin-top:8px;font-size:.8rem">Wird auf 256 px verkleinert. Gilt auch bei Imposter.</p>
+        </div>
+      </div>
+      <input type="file" id="optFile" accept="image/*" class="hidden" />
+    </div>
+
+    <div class="card">
+      <label>Benutzername</label>
+      <p id="optName" style="font-family:var(--display);font-weight:700;font-size:1.3rem;margin:0">—</p>
+      <p class="dim" style="font-size:.8rem;margin-top:6px">Der Benutzername ist fest vergeben und lässt sich nicht ändern.</p>
+    </div>
+
+    <div class="card">
+      <label>Aussehen</label>
+      <p class="dim" style="font-size:.85rem;margin:0 0 12px">Rahmen und Symbol für dein Profilbild wählst du im Inventar.</p>
+      <button class="btn ghost" id="btnInventory">Inventar öffnen</button>
+    </div>
+
+    <div class="card">
+      <label>Benachrichtigungen</label>
+      <div class="row" style="justify-content:space-between;gap:14px">
+        <div class="grow">
+          <div style="font-weight:700">Push auf dieses Gerät</div>
+          <div class="dim" id="pushHint" style="font-size:.82rem;margin-top:2px">—</div>
+        </div>
+        <button class="switch" id="btnPush" role="switch" aria-checked="false"><span class="knob"></span></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Bilanz</label>
+      <p class="dim" style="font-size:.85rem;margin:0 0 12px">Setzt Siege, Unentschieden und Niederlagen dieses Spiels auf null. Punkte, Gold und Imposter-Zahlen bleiben unberührt.</p>
+      <button class="btn ghost" id="btnResetRecord">Bilanz zurücksetzen</button>
+    </div>
+
+    <div class="stack">
+      <button class="btn yellow" id="optSave" disabled>Speichern</button>
+    </div>
+  </section>
+
+  <!-- ITEM-SHOP -->
+  <section id="screen-shop" class="screen">
+    <div class="head"><button class="link" id="btnShopBack">← Menü</button></div>
+    <h1>Item-Shop</h1>
+
+    <div class="goldbar">
+      <div>
+        <div class="amt" id="shopGold" style="text-align:center">0</div>
+        <div class="lbl" style="text-align:center">Gold</div>
+      </div>
+    </div>
+    <p class="dim" style="font-size:.85rem;margin-top:10px">
+      Gewonnene Runde 4 Gold · perfekte Runde 5 Gold extra · Spielsieg 12 Gold.
+      Dein Goldstand gilt in beiden Spielen.
+    </p>
+
+    <div class="card" style="margin-top:16px;border-color:rgba(79,214,192,.4)">
+      <h3>Nur hier erhältlich</h3>
+      <p class="dim" style="font-size:.82rem;margin:2px 0 0">Diese Stücke gibt es im Imposter-Shop nicht.</p>
+      <div class="shopgrid" id="shopOnly"></div>
+    </div>
+
+    <div class="card">
+      <h3>Symbole</h3>
+      <p class="dim" style="font-size:.82rem;margin:2px 0 0">Erscheinen klein unten rechts an deinem Bild.</p>
+      <div class="shopgrid" id="shopBadges"></div>
+    </div>
+
+    <div class="card">
+      <h3>Rahmen</h3>
+      <p class="dim" style="font-size:.82rem;margin:2px 0 0">Umranden dein Profilbild.</p>
+      <div class="shopgrid" id="shopFrames"></div>
+    </div>
+  </section>
+
+  <!-- TROPHÄEN -->
+  <section id="screen-trophies" class="screen">
+    <div class="head"><button class="link" id="btnTrophiesBack">← Menü</button></div>
+    <h1>Trophäen</h1>
+
+    <div class="goldbar">
+      <div>
+        <div class="amt" id="troCount" style="text-align:center">0</div>
+        <div class="lbl" style="text-align:center">von <span id="troTotal">0</span> freigeschaltet</div>
+      </div>
+    </div>
+    <p class="dim" style="font-size:.85rem;margin-top:10px">Tippe rechts auf den Kreis, um eine Trophäe in deinem Profil zu zeigen.</p>
+
+    <div id="troList"></div>
+  </section>
+
+  <!-- INVENTAR -->
+  <section id="screen-inventory" class="screen">
+    <div class="head"><button class="link" id="btnInventoryBack">← Zurück</button></div>
+    <h1>Inventar</h1>
+
+    <div class="card stack">
+      <div style="display:grid;place-items:center;padding:8px 0 4px" id="invPreview"></div>
+      <p class="dim" style="text-align:center;font-size:.85rem;margin:10px 0 0">So sehen dich die anderen — in beiden Spielen.</p>
+    </div>
+
+    <div class="card">
+      <h3>Symbol</h3>
+      <div class="shopgrid" id="invBadges"></div>
+    </div>
+
+    <div class="card">
+      <h3>Rahmen</h3>
+      <div class="shopgrid" id="invFrames"></div>
+    </div>
+
+    <div class="stack"><button class="btn ghost" id="btnToShopFromInv">Zum Item-Shop</button></div>
+  </section>
+
+  <!-- FREUNDESPROFIL -->
+  <section id="screen-friend" class="screen">
+    <div class="head"><button class="link" id="btnFriendBack">← Menü</button></div>
+
+    <div style="text-align:center">
+      <div id="frAva" style="display:inline-block"></div>
+      <h1 id="frName" style="margin-top:14px">—</h1>
+      <p class="dim" id="frSince" style="margin-top:6px">—</p>
+      <div id="frTrophy" class="trophyline"></div>
+    </div>
+
+    <div class="card stack">
+      <div class="eyebrow">Eure Bilanz</div>
+      <div id="frVs" style="font-size:1.6rem;margin-top:8px"></div>
+      <p class="dim" style="font-size:.82rem;margin-top:8px">Deine Siege · Unentschieden · deine Niederlagen</p>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Insgesamt</div>
+      <div class="statgrid">
+        <div class="stat"><div class="n" id="frGames">0</div><div class="l">Spiele</div></div>
+        <div class="stat"><div class="n" id="frPoints" style="color:var(--yellow)">0</div><div class="l">Punkte</div></div>
+        <div class="stat"><div class="n" id="frAvg">—</div><div class="l">Ø pro Runde</div></div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <button class="btn yellow" id="frChallenge">Herausfordern</button>
+      <div style="height:10px"></div>
+      <button class="btn ghost" id="frSetup">Spiel einstellen</button>
+      <button class="link" id="frRemove" style="width:100%;margin-top:18px;color:var(--magenta)">Freund entfernen</button>
+    </div>
+  </section>
+
+  <!-- SPIEL EINSTELLEN -->
+  <section id="screen-setup" class="screen">
+    <div class="head"><button class="link" id="btnSetupBack">← Menü</button></div>
+    <div class="row" style="margin-bottom:18px">
+      <span id="setupAvaBox"></span>
+      <div class="grow">
+        <div class="eyebrow">Spiel gegen</div>
+        <h2 id="setupName" style="margin-top:4px">—</h2>
+      </div>
+    </div>
+
+    <div class="card">
+      <label for="catSelect">Themenbereich</label>
+      <select id="catSelect"></select>
+      <p class="dim" style="font-size:.82rem;margin-top:8px">Bei „Gemischt“ kommt jede Runde aus einem anderen Bereich.</p>
+    </div>
+
+    <div class="card">
+      <h3>Schwierigkeit</h3>
+      <p class="dim" style="font-size:.82rem;margin:4px 0 0">Je höher die Stufe, desto spezieller das Wissen — und desto enger liegen die Plätze beieinander.</p>
+      <div class="levels" id="levelPicker"></div>
+      <p class="dim" id="levelDesc" style="font-size:.85rem;margin-top:12px">—</p>
+    </div>
+
+    <div class="stack">
+      <button class="btn yellow" id="btnSendSetup">Herausforderung senden</button>
+    </div>
+  </section>
+
+  <!-- WARTEN AUF ANNAHME -->
+  <section id="screen-waiting" class="screen">
+    <div style="padding-top:14vh;text-align:center">
+      <div class="spinner"></div>
+      <h2 style="margin-top:22px" id="waitTitle">Herausforderung verschickt</h2>
+      <p id="waitText" class="dim" style="margin-top:8px">Warte auf Antwort …</p>
+      <div class="stack"><button class="btn ghost" id="btnCancelChallenge">Zurückziehen</button></div>
+    </div>
+  </section>
+
+  <!-- RUNDE SPIELEN -->
+  <section id="screen-round" class="screen">
+    <div class="rndbar" id="rndBar"></div>
+
+    <div class="duel">
+      <span id="gMeBox"></span>
+      <span class="vs">gegen</span>
+      <span id="gOppBox"></span>
+    </div>
+
+    <div class="configpill" id="gameConfig"></div>
+
+    <div class="quest">
+      <div class="eyebrow" id="roundLabel">Runde 1 von 5</div>
+      <div class="q" id="roundQuestion" style="margin-top:9px">—</div>
+      <div class="u" id="roundUnit"></div>
+    </div>
+
+    <div class="slots" id="slotBox"></div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="eyebrow">Vorschläge — fünf davon gehören nicht hinein</div>
+      <div class="opts" id="optBox"></div>
+    </div>
+
+    <div class="stack">
+      <button class="btn yellow" id="btnSubmitList" disabled>Liste abgeben</button>
+      <p class="dim" id="submitHint" style="text-align:center;font-size:.82rem;margin-top:10px">Setze alle fünf Plätze.</p>
+      <button class="link" id="btnAbort" style="width:100%;margin-top:12px;color:var(--magenta)">Spiel abbrechen</button>
+    </div>
+  </section>
+
+  <!-- WARTEN AUF DEN GEGNER -->
+  <section id="screen-wait-opp" class="screen">
+    <div style="padding-top:12vh;text-align:center">
+      <div class="spinner"></div>
+      <h2 style="margin-top:22px">Abgegeben</h2>
+      <p class="dim" id="waitOppText" style="margin-top:8px">—</p>
+      <div class="card stack" style="text-align:left">
+        <div class="eyebrow">Deine Liste</div>
+        <div id="waitOppList" style="margin-top:8px"></div>
+      </div>
+      <div class="stack"><button class="btn ghost" id="btnAbort2" style="color:var(--magenta)">Spiel abbrechen</button></div>
+    </div>
+  </section>
+
+  <!-- AUFLÖSUNG EINER RUNDE -->
+  <section id="screen-reveal" class="screen">
+    <div class="rndbar" id="revBar"></div>
+    <div class="eyebrow" id="revLabel">Runde 1 von 5</div>
+    <h2 id="revQuestion" style="margin-top:9px">—</h2>
+
+    <div class="duelscore" id="revScore"></div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="eyebrow">Die richtige Reihenfolge</div>
+      <div id="revList" style="margin-top:6px"></div>
+    </div>
+
+    <p class="dim" id="revNote" style="font-size:.84rem;margin-top:12px"></p>
+
+    <div class="stack">
+      <button class="btn yellow" id="btnNextRound">Weiter</button>
+    </div>
+  </section>
+
+  <!-- ENDSTAND -->
+  <section id="screen-final" class="screen">
+    <canvas id="fx"></canvas>
+    <div class="eyebrow">Endstand nach fünf Runden</div>
+
+    <div class="verdict" id="finalVerdict" style="margin-top:12px">
+      <div class="burst" id="pointsBurst">+0</div>
+      <div class="eyebrow" id="finalEyebrow">—</div>
+      <div class="big" id="finalBig" style="margin-top:6px">—</div>
+      <p id="finalText" style="margin-top:8px"></p>
+    </div>
+
+    <div class="duelscore" id="finalScore"></div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="eyebrow">Runde für Runde</div>
+      <div class="rtable" id="finalTable"></div>
+    </div>
+
+    <div class="stack">
+      <button class="btn yellow" id="btnBackHome">Zurück zum Menü</button>
+      <div style="height:10px"></div>
+      <button class="btn ghost" id="btnRematch">Revanche</button>
+    </div>
+  </section>
+
+  <!-- STATISTIKEN -->
+  <section id="screen-stats" class="screen">
+    <div class="head"><button class="link" id="btnStatsBack">← Menü</button></div>
+    <h1>Statistiken</h1>
+
+    <div class="card stack">
+      <div class="row">
+        <span id="stAvaBox"></span>
+        <div class="grow">
+          <div class="name" id="stName" style="font-weight:700">—</div>
+          <div class="sub" id="stRate">—</div>
+        </div>
+      </div>
+      <div id="stTrophy" class="trophyline"></div>
+      <div class="statgrid">
+        <div class="stat"><div class="n" id="stGames">0</div><div class="l">Spiele</div></div>
+        <div class="stat"><div class="n" id="stWins" style="color:var(--ok)">0</div><div class="l">Siege</div></div>
+        <div class="stat"><div class="n" id="stPoints" style="color:var(--yellow)">0</div><div class="l">Punkte</div></div>
+      </div>
+      <div class="statgrid">
+        <div class="stat"><div class="n" id="stRounds">0</div><div class="l">Runden gewonnen</div></div>
+        <div class="stat"><div class="n" id="stPerfect">0</div><div class="l">perfekte Runden</div></div>
+        <div class="stat"><div class="n" id="stBest">0</div><div class="l">längste Serie</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Rangliste im Freundeskreis</h3>
+      <div id="leaderboard" style="margin-top:8px"></div>
+    </div>
+  </section>
+
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+/* ══════════════════════════════════════════════════════════════
+   1) FIREBASE — dasselbe Projekt wie Imposter.
+      Dadurch teilen sich beide Spiele Konten, Gold, Freunde
+      und gekaufte Items. Nur die Spieldaten liegen getrennt.
+   ══════════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey:            "AIzaSyAcX3srk-8QwQsmBceNL60QOqKm9nsAXtQ",
+  authDomain:        "imposter-97906.firebaseapp.com",
+  projectId:         "imposter-97906",
+  storageBucket:     "imposter-97906.firebasestorage.app",
+  messagingSenderId: "901485243872",
+  appId:             "1:901485243872:web:4747b8e2966374cdac4f85",
+  measurementId:     "G-1PVH3B9LMB"
+};
+
+const LOGIN = { google: true, apple: false, email: true, guest: true };
+const VAPID_KEY = "BJEYwBeWexFtDo92-GKE0I1kaWv3dROqnfZ0JA7AzvGoGpiXX6PvuTb6wOnn6HxpxHlz308bn9ezlThgmM8SJUs";
+
+/* Vercel Function, die die Anthropic API aufruft. */
+const LISTS_ENDPOINT = "/api/lists";
+
+/* Getrennte Ablagen, damit sich die Spiele nicht in die Quere kommen */
+const GAMES     = "listgames";                 // statt "games"
+const INVITES   = "listinvites";               // statt "invites"
+const ACTIVE    = "activeListGameId";          // statt "activeGameId"
+const ROUNDS    = 5;
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, OAuthProvider, signInWithPopup, signInWithRedirect,
+  signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  sendPasswordResetEmail, signInAnonymously,
+  onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { getMessaging, getToken, isSupported } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging.js";
+import {
+  getFirestore, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+  query, onSnapshot, runTransaction,
+  arrayUnion, arrayRemove, increment, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+/* ══════════════════════════════════════════════════════════════
+   2) Hilfsfunktionen
+   ══════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+
+(function(){
+  const sp = $("splash");
+  if (!sp) return;
+  const kill = () => sp.remove();
+  sp.addEventListener("click", () => { sp.classList.add("skip"); setTimeout(kill, 300); });
+  sp.addEventListener("animationend", e => { if (e.animationName === "splashOut") kill(); });
+  setTimeout(kill, 3400);
+})();
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const AVA_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#262C5C"/><circle cx="32" cy="25" r="11" fill="#9AA0CC"/><path d="M8 64c0-14 11-22 24-22s24 8 24 22z" fill="#9AA0CC"/></svg>`
+);
+
+let toastTimer;
+function toast(msg){
+  const t = $("toast");
+  t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("on"), 2800);
+}
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
+  $(id).classList.add("on");
+  window.scrollTo(0,0);
+}
+function esc(s){ return String(s??"").replace(/[<>&"]/g, c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c])); }
+const userRef = uid => doc(db,"users",uid);
+const gameRefOf = gid => doc(db, GAMES, gid);
+
+/* Firestore-Regeln greifen erst, wenn der Server den Status bestätigt hat. */
+async function getDocRetry(ref, tries = 8){
+  for (let i = 0; i < tries; i++){
+    try {
+      const s = await getDoc(ref);
+      if (s.exists()) return s;
+    } catch(_){}
+    await sleep(200 + i * 200);
+  }
+  return null;
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   3) Zustand
+   ══════════════════════════════════════════════════════════════ */
+let me = null;
+let profile = null;
+let unsubProfile = null, unsubInvites = null, unsubGame = null;
+let currentGameId = null, currentGame = null;
+let sideEffectGuard = new Set();
+let pendingPhoto = null;
+const userCache = new Map();
+const solutionCache = new Map();   // "gid:r0" → { top:[…], note:"" }
+let draft = [];                    // aktuell gesetzte Plätze der laufenden Runde
+let draftRound = -1;
+
+/* ══════════════════════════════════════════════════════════════
+   4) Anmeldung
+   ══════════════════════════════════════════════════════════════ */
+const AUTH_ERR = {
+  "auth/invalid-email": "Diese E-Mail-Adresse ist ungültig.",
+  "auth/missing-password": "Bitte ein Passwort eingeben.",
+  "auth/weak-password": "Das Passwort braucht mindestens 6 Zeichen.",
+  "auth/email-already-in-use": "Diese Adresse ist schon registriert — melde dich an.",
+  "auth/invalid-credential": "E-Mail oder Passwort stimmt nicht.",
+  "auth/user-not-found": "Zu dieser Adresse gibt es kein Konto.",
+  "auth/wrong-password": "Das Passwort stimmt nicht.",
+  "auth/too-many-requests": "Zu viele Versuche. Warte einen Moment.",
+  "auth/operation-not-allowed": "Dieser Anmeldeweg ist in Firebase noch nicht aktiviert.",
+  "auth/popup-blocked": "Das Fenster wurde blockiert. Erlaube Pop-ups oder nutze E-Mail."
+};
+const authMsg = e => AUTH_ERR[e?.code] || ("Anmeldung fehlgeschlagen: " + (e?.code || e?.message || ""));
+
+async function oauth(provider){
+  try { await signInWithPopup(auth, provider); }
+  catch(e){
+    if (String(e.code).includes("popup")){
+      try { await signInWithRedirect(auth, provider); return; } catch(_){}
+    }
+    toast(authMsg(e));
+  }
+}
+
+if (!LOGIN.apple) $("btnApple").classList.add("hidden");
+if (!LOGIN.email) $("btnMailToggle").classList.add("hidden");
+if (!LOGIN.guest){ $("btnGuest").classList.add("hidden"); $("guestSep").classList.add("hidden"); }
+
+$("btnGoogle").onclick = () => {
+  const p = new GoogleAuthProvider();
+  p.setCustomParameters({ prompt: "select_account" });
+  oauth(p);
+};
+$("btnApple").onclick = () => {
+  const p = new OAuthProvider("apple.com");
+  p.addScope("email"); p.addScope("name");
+  oauth(p);
+};
+$("btnGuest").onclick = async () => {
+  try { await signInAnonymously(auth); }
+  catch(e){ toast(authMsg(e)); }
+};
+
+let mailMode = "in";
+$("btnMailToggle").onclick = () => $("mailPanel").classList.toggle("hidden");
+$("mailTabs").querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
+  mailMode = b.dataset.tab;
+  $("mailTabs").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  $("btnMailGo").textContent = mailMode === "in" ? "Anmelden" : "Konto anlegen";
+});
+$("btnMailGo").onclick = async () => {
+  const mail = $("mailAddr").value.trim(), pass = $("mailPass").value;
+  if (!mail || !pass){ toast("E-Mail und Passwort eingeben."); return; }
+  const btn = $("btnMailGo"); btn.disabled = true;
+  try {
+    if (mailMode === "in") await signInWithEmailAndPassword(auth, mail, pass);
+    else await createUserWithEmailAndPassword(auth, mail, pass);
+  } catch(e){ toast(authMsg(e)); }
+  finally { btn.disabled = false; }
+};
+$("btnMailReset").onclick = async () => {
+  const mail = $("mailAddr").value.trim();
+  if (!mail){ toast("Trage zuerst deine E-Mail-Adresse ein."); return; }
+  try { await sendPasswordResetEmail(auth, mail); toast("E-Mail zum Zurücksetzen ist unterwegs."); }
+  catch(e){ toast(authMsg(e)); }
+};
+
+$("btnSignOut").onclick = () => signOut(auth);
+$("obSignOut").onclick  = () => signOut(auth);
+
+function cleanup(){
+  if (unsubProfile){ unsubProfile(); unsubProfile = null; }
+  if (unsubInvites){ unsubInvites(); unsubInvites = null; }
+  if (unsubGame){ unsubGame(); unsubGame = null; }
+  currentGameId = currentGame = null;
+  sideEffectGuard = new Set();
+  solutionCache.clear();
+  userCache.clear();
+  profile = null;
+}
+
+onAuthStateChanged(auth, async user => {
+  cleanup();
+  me = user;
+  if (!user){ show("screen-auth"); return; }
+  show("screen-loading");
+  const snap = await getDocRetry(userRef(user.uid), 3);
+  if (snap && snap.data().username){
+    profile = snap.data();
+    startSession();
+  } else {
+    pendingPhoto = user.photoURL ? await urlToDataUrl(user.photoURL) : null;
+    $("obAva").src = pendingPhoto || AVA_FALLBACK;
+    $("obUsername").value = suggestName(user.displayName || user.email || "");
+    show("screen-onboarding");
+  }
+});
+
+function suggestName(s){
+  const base = String(s).split("@")[0].replace(/[^A-Za-z0-9_]/g, "").slice(0, 16);
+  return base.length >= 3 ? base : "";
+}
+
+/* ---------- Profilbild ---------- */
+function resizeImage(file, size){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = c.height = size;
+        const ctx = c.getContext("2d");
+        const s = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - s)/2, (img.height - s)/2, s, s, 0, 0, size, size);
+        res(c.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = rej;
+      img.src = fr.result;
+    };
+    fr.onerror = rej;
+    fr.readAsDataURL(file);
+  });
+}
+async function urlToDataUrl(url){
+  try {
+    const blob = await (await fetch(url, {mode:"cors"})).blob();
+    return await resizeImage(blob, 256);
+  } catch(_){ return null; }
+}
+
+$("obPickPhoto").onclick = () => $("obFile").click();
+$("obFile").onchange = async e => {
+  const f = e.target.files?.[0]; if (!f) return;
+  pendingPhoto = await resizeImage(f, 256);
+  $("obAva").src = pendingPhoto;
+};
+$("optPickPhoto").onclick = () => $("optFile").click();
+$("optFile").onchange = async e => {
+  const f = e.target.files?.[0]; if (!f) return;
+  pendingPhoto = await resizeImage(f, 256);
+  $("optAva").src = pendingPhoto;
+  $("optSave").disabled = false;
+};
+$("optSave").onclick = async () => {
+  if (!pendingPhoto) return;
+  const btn = $("optSave"); btn.disabled = true; btn.textContent = "Wird gespeichert …";
+  try {
+    await updateDoc(userRef(me.uid), { photo: pendingPhoto });
+    userCache.delete(me.uid);
+    pendingPhoto = null;
+    toast("Gespeichert.");
+    btn.textContent = "Speichern";
+  } catch(e){
+    toast("Fehler: " + (e.code || e.message));
+    btn.disabled = false; btn.textContent = "Speichern";
+  }
+};
+
+$("obSave").onclick = async () => {
+  const raw = $("obUsername").value.trim();
+  if (!/^[A-Za-z0-9_]{3,16}$/.test(raw)){
+    toast("3–16 Zeichen: Buchstaben, Zahlen, Unterstrich."); return;
+  }
+  const lower = raw.toLowerCase();
+  const btn = $("obSave"); btn.disabled = true; btn.textContent = "Wird angelegt …";
+  try {
+    await runTransaction(db, async tx => {
+      const nameRef = doc(db,"usernames",lower);
+      const taken = await tx.get(nameRef);
+      if (taken.exists() && taken.data().uid !== me.uid) throw new Error("taken");
+      tx.set(nameRef, { uid: me.uid });
+      tx.set(userRef(me.uid), {
+        uid: me.uid,
+        username: raw,
+        usernameLower: lower,
+        photo: pendingPhoto || "",
+        friends: [],
+        gold: 0,
+        goldTotal: 0,
+        owned: [],
+        loginDays: 0,
+        lastLogin: "",
+        pushTokens: [],
+        createdAt: serverTimestamp()
+      }, { merge: true });
+    });
+    const s = await getDocRetry(userRef(me.uid));
+    profile = s ? s.data() : null;
+    startSession();
+  } catch(e){
+    toast(e.message === "taken" ? "Benutzername ist schon vergeben." : "Fehler: " + (e.code || e.message));
+  } finally { btn.disabled = false; btn.textContent = "Profil anlegen"; }
+};
+
+/* ══════════════════════════════════════════════════════════════
+   5) Session
+   ══════════════════════════════════════════════════════════════ */
+function startSession(){
+  show("screen-home");
+
+  unsubProfile = onSnapshot(userRef(me.uid), snap => {
+    if (!snap.exists()) return;
+    profile = snap.data();
+    countLoginDay();
+    pushStatusPruefen();
+    renderHome();
+    renderStats();
+    loadFriends();
+    if ($("screen-shop").classList.contains("on")) renderShop();
+    if ($("screen-inventory").classList.contains("on")) renderInventory();
+    if ($("screen-trophies").classList.contains("on")) renderTrophies();
+    const gid = profile[ACTIVE];
+    if (gid && gid !== currentGameId) watchGame(gid);
+  });
+
+  unsubInvites = onSnapshot(collection(db,"users",me.uid,INVITES), snap => {
+    renderInvites(snap.docs.map(d => ({ id:d.id, ...d.data() })));
+  });
+}
+
+let loginChecked = false;
+async function countLoginDay(){
+  if (loginChecked || !profile) return;
+  loginChecked = true;
+  const today = new Date().toLocaleDateString("sv-SE");
+  if (profile.lastLogin === today) return;
+  try { await updateDoc(userRef(me.uid), { lastLogin: today, loginDays: increment(1) }); } catch(_){}
+}
+
+function renderHome(){
+  renderInstall();
+  $("homeAvaBox").innerHTML = avaHTML(meLook(), "xl");
+  $("homeName").textContent = profile.username;
+  $("optName").textContent = profile.username;
+  $("optAva").src = profile.photo || AVA_FALLBACK;
+
+  const gid = profile[ACTIVE];
+  $("resumeCard").classList.toggle("hidden", !gid);
+  if (gid) $("resumeText").textContent = "Du hast ein Spiel offen.";
+}
+$("btnResume").onclick = () => { if (profile?.[ACTIVE]) watchGame(profile[ACTIVE]); };
+
+/* ══════════════════════════════════════════════════════════════
+   6) Items — geteilter Katalog plus Stücke nur für dieses Spiel
+   ══════════════════════════════════════════════════════════════ */
+/* Diese IDs sind identisch zu Imposter: was dort gekauft wurde,
+   ist auch hier vorhanden — und umgekehrt. */
+const BADGES = [
+  { id:"lupe",     icon:"🔍",  label:"Detektiv",  price:60 },
+  { id:"maske",    icon:"🎭",  label:"Maske",     price:60 },
+  { id:"kerze",    icon:"🕯️", label:"Kerze",     price:60 },
+  { id:"fuchs",    icon:"🦊",  label:"Fuchs",     price:90 },
+  { id:"schlange", icon:"🐍",  label:"Schlange",  price:90 },
+  { id:"blitz",    icon:"⚡",  label:"Blitz",     price:90 },
+  { id:"flamme",   icon:"🔥",  label:"Flamme",    price:130 },
+  { id:"eis",      icon:"🧊",  label:"Eis",       price:130 },
+  { id:"joker",    icon:"🃏",  label:"Joker",     price:180 },
+  { id:"schaedel", icon:"💀",  label:"Totenkopf", price:180 },
+  { id:"ufo",      icon:"🛸",  label:"Ufo",       price:250 },
+  { id:"krone",    icon:"👑",  label:"Krone",     price:400 },
+
+  /* --- nur im Rangliste-Shop --- */
+  { id:"klemmbrett", icon:"📋", label:"Klemmbrett", price:90,  only:true },
+  { id:"wuerfel",    icon:"🎲", label:"Würfel",     price:90,  only:true },
+  { id:"podest",     icon:"🏆", label:"Podest",     price:130, only:true },
+  { id:"waage",      icon:"⚖️", label:"Waage",      price:160, only:true },
+  { id:"eule",       icon:"🦉", label:"Eule",       price:200, only:true },
+  { id:"rakete",     icon:"🚀", label:"Rakete",     price:250, only:true },
+  { id:"globus",     icon:"🌍", label:"Globus",     price:400, only:true },
+
+  /* Nur über Imposter-Trophäen erreichbar. Hier nicht zu kaufen, aber
+     tragbar, sobald die Bedingung drüben erfüllt ist — die Zahlen dafür
+     stehen im selben Nutzerdokument. */
+  { id:"medaille", icon:"🏅", label:"Medaille", foreign:u => (u?.stats?.wins ?? 0)  >= 50 },
+  { id:"stern",    icon:"🌟", label:"Stern",    foreign:u => (u?.bestStreak ?? 0)   >= 10 },
+  { id:"mond",     icon:"🌙", label:"Mond",     foreign:u => (u?.loginDays ?? 0)    >= 30 },
+  { id:"hirn",     icon:"🧠", label:"Hirn",     foreign:u => (u?.bonusHits ?? 0)    >= 10 },
+  { id:"diamant",  icon:"💎", label:"Diamant",  foreign:u => (u?.goldTotal ?? 0)    >= 1000 },
+
+  /* Nur über Rangliste-Trophäen */
+  { id:"orakel",  icon:"🔮", label:"Orakel",  unlock:"lw25", only:true },
+  { id:"hundert", icon:"💯", label:"Hundert", unlock:"lp1",  only:true }
+];
+
+const FRAMES = [
+  { id:"paper",  label:"Papier",     price:150 },
+  { id:"gold",   label:"Gold",       price:280 },
+  { id:"rose",   label:"Rose",       price:280 },
+  { id:"mint",   label:"Minze",      price:280 },
+  { id:"sunset", label:"Abendrot",   price:550 },
+  { id:"ocean",  label:"Tiefsee",    price:550 },
+  { id:"royal",  label:"Königlich",  price:1000 },
+
+  /* --- nur im Rangliste-Shop --- */
+  { id:"bronze", label:"Bronze", price:200, only:true },
+  { id:"silber", label:"Silber", price:340, only:true },
+  { id:"platin", label:"Platin", price:700, only:true },
+  { id:"neon",   label:"Neon",   price:900, only:true },
+
+  /* Imposter-Trophäen */
+  { id:"champion", label:"Champion", foreign:u => (u?.stats?.wins ?? 0) >= 100 },
+  { id:"legend",   label:"Legende",  foreign:u => (u?.stats?.wins ?? 0) >= 250 },
+  { id:"inferno",  label:"Inferno",  foreign:u => (u?.bestStreak ?? 0)  >= 20 },
+  { id:"veteran",  label:"Veteran",  foreign:u => (u?.loginDays ?? 0)   >= 100 },
+  { id:"psychic",  label:"Seher",    foreign:u => (u?.bonusHits ?? 0)   >= 50 },
+
+  /* Rangliste-Trophäen */
+  { id:"rangkrone",  label:"Ranghoheit", unlock:"lw100", only:true },
+  { id:"perfektion", label:"Perfektion", unlock:"lp10",  only:true }
+];
+
+const badgeById = id => BADGES.find(b => b.id === id);
+const frameById = id => FRAMES.find(f => f.id === id);
+
+function avaHTML(u, cls = ""){
+  const frame = u?.frame && frameById(u.frame) ? "fr-" + u.frame : "";
+  const b = badgeById(u?.badge);
+  return `<span class="avaWrap ${cls} ${frame}">`
+    + `<img class="ava ${cls}" src="${esc(u?.photo || AVA_FALLBACK)}" alt="" />`
+    + (b ? `<span class="avaBadge">${b.icon}</span>` : "")
+    + `</span>`;
+}
+function recordBar(w, d, l){
+  return `<div class="record"><span class="w">${w}</span><span class="sep">/</span>`
+       + `<span class="d">${d}</span><span class="sep">/</span>`
+       + `<span class="l">${l}</span></div>`;
+}
+const listStats = u => u?.list || {};
+function recordHTML(u){
+  const s = listStats(u);
+  return recordBar(s.wins ?? 0, s.draws ?? 0, s.losses ?? 0);
+}
+function vsHTML(uid){
+  const v = profile?.listVs?.[uid] || {};
+  return recordBar(v.w ?? 0, v.d ?? 0, v.l ?? 0);
+}
+function meLook(extra = {}){
+  return { photo: profile?.photo, badge: profile?.badge, frame: profile?.frame, ...extra };
+}
+
+/* ══════════════════════════════════════════════════════════════
+   7) Trophäen — eigene Reihe, eigenes Anzeigefeld (trophyList),
+      damit die Imposter-Trophäe unangetastet bleibt.
+   ══════════════════════════════════════════════════════════════ */
+const V = {
+  wins:    u => listStats(u).wins       ?? 0,
+  games:   u => listStats(u).games      ?? 0,
+  points:  u => listStats(u).points     ?? 0,
+  rounds:  u => listStats(u).roundWins  ?? 0,
+  perfect: u => listStats(u).perfect    ?? 0,
+  streak:  u => listStats(u).bestStreak ?? 0,
+  days:    u => u?.loginDays  ?? 0,
+  gold:    u => u?.goldTotal  ?? 0,
+  buddies: u => (u?.friends || []).length
+};
+const TROPHIES = [
+  { g:"Siege", id:"lw1",   ic:"🎯", nm:"Erster Sieg",   need:1,   v:V.wins, tx:"Gewinne ein Spiel" },
+  { g:"Siege", id:"lw10",  ic:"🥉", nm:"Aufgewärmt",    need:10,  v:V.wins, tx:"Gewinne 10 Spiele" },
+  { g:"Siege", id:"lw25",  ic:"🥈", nm:"Listenführer",  need:25,  v:V.wins, tx:"Gewinne 25 Spiele" },
+  { g:"Siege", id:"lw50",  ic:"🥇", nm:"Platzhirsch",   need:50,  v:V.wins, tx:"Gewinne 50 Spiele" },
+  { g:"Siege", id:"lw100", ic:"👑", nm:"Ranghoheit",    need:100, v:V.wins, tx:"Gewinne 100 Spiele" },
+
+  { g:"Perfektion", id:"lp1",  ic:"💯", nm:"Volle Punktzahl", need:1,  v:V.perfect, tx:"Eine Runde mit 50 Punkten" },
+  { g:"Perfektion", id:"lp10", ic:"🎖️", nm:"Makellos",        need:10, v:V.perfect, tx:"10 Runden mit 50 Punkten" },
+  { g:"Perfektion", id:"lp50", ic:"🗿", nm:"Unfehlbar",       need:50, v:V.perfect, tx:"50 Runden mit 50 Punkten" },
+
+  { g:"Siegesserien", id:"ls3",  ic:"🔗", nm:"Dreierpack",   need:3,  v:V.streak, tx:"3 Spiele hintereinander gewonnen" },
+  { g:"Siegesserien", id:"ls5",  ic:"🚀", nm:"Im Lauf",      need:5,  v:V.streak, tx:"5 Spiele hintereinander gewonnen" },
+  { g:"Siegesserien", id:"ls10", ic:"🌟", nm:"Unaufhaltsam", need:10, v:V.streak, tx:"10 Spiele hintereinander gewonnen" },
+
+  { g:"Punkte", id:"lpt500",   ic:"🧮", nm:"Punktesammler", need:500,   v:V.points, tx:"500 Punkte insgesamt" },
+  { g:"Punkte", id:"lpt2500",  ic:"📊", nm:"Statistiker",   need:2500,  v:V.points, tx:"2500 Punkte insgesamt" },
+  { g:"Punkte", id:"lpt10000", ic:"🏛️", nm:"Archivar",      need:10000, v:V.points, tx:"10000 Punkte insgesamt" },
+
+  { g:"Erfahrung", id:"lg10",  ic:"🎲", nm:"Mitspieler",  need:10,  v:V.games,  tx:"10 Spiele gespielt" },
+  { g:"Erfahrung", id:"lg50",  ic:"🎪", nm:"Vielspieler", need:50,  v:V.games,  tx:"50 Spiele gespielt" },
+  { g:"Erfahrung", id:"lr100", ic:"📈", nm:"Rundensieger",need:100, v:V.rounds, tx:"100 Runden gewonnen" },
+
+  { g:"Treue", id:"ld3",  ic:"☕", nm:"Wiederkehrer", need:3,  v:V.days, tx:"An 3 Tagen gespielt" },
+  { g:"Treue", id:"ld7",  ic:"📆", nm:"Stammgast",    need:7,  v:V.days, tx:"An 7 Tagen gespielt" },
+  { g:"Treue", id:"ld30", ic:"🌙", nm:"Ein Monat",    need:30, v:V.days, tx:"An 30 Tagen gespielt" },
+
+  { g:"Reichtum", id:"lgo250",  ic:"🪙", nm:"Sammler",       need:250,  v:V.gold, tx:"250 Gold verdient" },
+  { g:"Reichtum", id:"lgo1000", ic:"💎", nm:"Schatzmeister", need:1000, v:V.gold, tx:"1000 Gold verdient" },
+
+  { g:"Freundeskreis", id:"lf3",  ic:"🤝", nm:"Gesellig",   need:3,  v:V.buddies, tx:"3 Freunde hinzugefügt" },
+  { g:"Freundeskreis", id:"lf10", ic:"🌐", nm:"Netzwerker", need:10, v:V.buddies, tx:"10 Freunde hinzugefügt" }
+];
+const troById  = id => TROPHIES.find(t => t.id === id);
+const troDone  = (t, u) => t.v(u) >= t.need;
+const troCountOf = u => TROPHIES.filter(t => troDone(t, u)).length;
+
+function unlockFor(troId){
+  const b = BADGES.find(x => x.unlock === troId);
+  if (b) return { kind:"Symbol", label:b.label, icon:b.icon };
+  const f = FRAMES.find(x => x.unlock === troId);
+  if (f) return { kind:"Rahmen", label:f.label };
+  return null;
+}
+/* Besitz: gekauft, über eine Trophäe hier freigeschaltet — oder
+   drüben bei Imposter erworben (steht dann ebenfalls in "owned"). */
+function hasItem(kind, it, u = profile){
+  if ((u?.owned || []).includes(kind + ":" + it.id)) return true;
+  if (it.unlock) return troDone(troById(it.unlock) || {v:()=>0,need:1}, u);
+  if (typeof it.foreign === "function") return it.foreign(u);
+  return false;
+}
+function trophyLineHTML(u){
+  const t = troById(u?.trophyList);
+  if (!t || !troDone(t, u)) return "";
+  return `<span class="ic">${t.ic}</span><span>${esc(t.nm)}</span>`;
+}
+
+$("btnTrophies").onclick     = () => { renderTrophies(); show("screen-trophies"); };
+$("btnTrophiesBack").onclick = () => show("screen-home");
+
+function renderTrophies(){
+  $("troTotal").textContent = TROPHIES.length;
+  $("troCount").textContent = troCountOf(profile);
+
+  const groups = [...new Set(TROPHIES.map(t => t.g))];
+  $("troList").innerHTML = groups.map(g => {
+    const all  = TROPHIES.filter(t => t.g === g);
+    const idx  = all.findIndex(t => !troDone(t, profile));
+    const open = idx === -1 ? all.length : idx + 1;
+    const rest = all.length - open;
+    return `
+    <div class="card">
+      <h3>${esc(g)}</h3>
+      <div style="margin-top:6px">
+        ${all.slice(0, open).map(t => {
+          const cur  = t.v(profile);
+          const done = cur >= t.need;
+          const pct  = Math.min(100, Math.round(cur / t.need * 100));
+          const un   = unlockFor(t.id);
+          return `<div class="tro ${done?"done":""}">
+            <div class="tro-ic">${t.ic}</div>
+            <div class="grow">
+              <div class="tro-nm">${esc(t.nm)}</div>
+              <div class="tro-tx">${esc(t.tx)} · ${Math.min(cur, t.need)}/${t.need}</div>
+              ${done ? "" : `<div class="bar"><i style="width:${pct}%"></i></div>`}
+              ${un ? `<div class="unlocknote">Schaltet ${un.kind} „${esc(un.label)}“ frei</div>` : ""}
+            </div>
+            ${done
+              ? `<button class="tro-pick ${profile?.trophyList===t.id?"on":""}" data-tro="${t.id}" aria-label="Im Profil zeigen">${profile?.trophyList===t.id?"✓":""}</button>`
+              : `<span class="tro-pick" style="opacity:.25">🔒</span>`}
+          </div>`;
+        }).join("")}
+        ${rest > 0 ? `<div class="tro"><div class="tro-ic">?</div><div class="grow"><div class="tro-nm">Noch ${rest} weitere</div><div class="tro-tx">Zeigen sich, sobald du die davor geschafft hast</div></div></div>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+
+  $("troList").querySelectorAll("[data-tro]").forEach(b => b.onclick = () => pickTrophy(b.dataset.tro));
+}
+
+async function pickTrophy(id){
+  const next = profile?.trophyList === id ? "" : id;
+  try {
+    await updateDoc(userRef(me.uid), { trophyList: next });
+    userCache.delete(me.uid);
+    renderTrophies();
+    toast(next ? "Trophäe im Profil gesetzt." : "Trophäe entfernt.");
+  } catch(e){ toast("Fehler: " + (e.code || e.message)); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   8) Item-Shop und Inventar
+   ══════════════════════════════════════════════════════════════ */
+const gold  = () => profile?.gold ?? 0;
+const owned = () => profile?.owned ?? [];
+
+function framePreview(id){
+  return `<span class="avaWrap ${id ? "fr-" + id : ""}"><span class="ava ring"></span></span>`;
+}
+
+$("btnShop").onclick          = () => { renderShop(); show("screen-shop"); };
+$("btnShopBack").onclick      = () => show("screen-home");
+$("btnInventory").onclick     = () => { renderInventory(); show("screen-inventory"); };
+$("btnInventoryBack").onclick = () => show("screen-options");
+$("btnToShopFromInv").onclick = () => { renderShop(); show("screen-shop"); };
+$("btnOptions").onclick       = () => show("screen-options");
+$("btnOptionsBack").onclick   = () => show("screen-home");
+$("btnTutorial").onclick      = () => show("screen-tutorial");
+$("btnTutorialBack").onclick  = () => show("screen-home");
+$("btnTutorialDone").onclick  = () => show("screen-home");
+
+function itemHTML(it, kind){
+  const key  = kind + ":" + it.id;
+  const mine = owned().includes(key);
+  const poor = !mine && gold() < it.price;
+  const prev = kind === "b" ? `<div class="prev">${it.icon}</div>` : framePreview(it.id);
+  return `<button class="item ${mine?"owned":""} ${poor?"poor":""} ${it.only?"exclusive":""}" data-buy="${key}" ${mine?"disabled":""}>
+    ${it.only ? `<span class="only">exklusiv</span>` : ""}
+    ${prev}
+    <span class="nm">${esc(it.label)}</span>
+    <span class="pr">${mine ? "im Besitz" : it.price + " Gold"}</span>
+  </button>`;
+}
+
+function renderShop(){
+  $("shopGold").textContent = gold();
+
+  const onlyB = BADGES.filter(b => b.only && b.price);
+  const onlyF = FRAMES.filter(f => f.only && f.price);
+  $("shopOnly").innerHTML =
+    onlyB.map(b => itemHTML(b, "b")).join("") + onlyF.map(f => itemHTML(f, "f")).join("");
+
+  $("shopBadges").innerHTML = BADGES.filter(b => b.price && !b.only).map(b => itemHTML(b, "b")).join("");
+  $("shopFrames").innerHTML = FRAMES.filter(f => f.price && !f.only).map(f => itemHTML(f, "f")).join("");
+
+  document.querySelectorAll("#screen-shop [data-buy]").forEach(b => b.onclick = () => buyItem(b.dataset.buy));
+}
+
+function priceOf(key){
+  const [kind, id] = key.split(":");
+  const it = kind === "b" ? badgeById(id) : frameById(id);
+  return it && it.price ? it.price : Infinity;
+}
+
+async function buyItem(key){
+  if (owned().includes(key)) return;
+  const price = priceOf(key);
+  if (!Number.isFinite(price)){ toast("Dieses Stück gibt es nicht zu kaufen."); return; }
+  if (gold() < price){ toast(`Dir fehlen noch ${price - gold()} Gold.`); return; }
+  try {
+    await updateDoc(userRef(me.uid), { gold: increment(-price), owned: arrayUnion(key) });
+    toast("Gekauft. Anlegen kannst du es im Inventar.");
+  } catch(e){ toast("Kauf fehlgeschlagen: " + (e.code || e.message)); }
+}
+
+function renderInventory(){
+  $("invPreview").innerHTML = avaHTML(meLook(), "lg");
+
+  const myBadges = BADGES.filter(b => hasItem("b", b));
+  $("invBadges").innerHTML =
+    `<button class="item ${!profile?.badge ? "sel" : ""}" data-eq="badge:">
+       <div class="prev">—</div><span class="nm">Keins</span></button>` +
+    myBadges.map(b => `<button class="item ${profile?.badge===b.id?"sel":""}" data-eq="badge:${b.id}">
+       <div class="prev">${b.icon}</div><span class="nm">${esc(b.label)}</span></button>`).join("");
+
+  const myFrames = FRAMES.filter(f => hasItem("f", f));
+  $("invFrames").innerHTML =
+    `<button class="item ${!profile?.frame ? "sel" : ""}" data-eq="frame:">
+       ${framePreview("")}<span class="nm">Keiner</span></button>` +
+    myFrames.map(f => `<button class="item ${profile?.frame===f.id?"sel":""}" data-eq="frame:${f.id}">
+       ${framePreview(f.id)}<span class="nm">${esc(f.label)}</span></button>`).join("");
+
+  document.querySelectorAll("#screen-inventory [data-eq]").forEach(b => b.onclick = () => {
+    const [slot, id] = b.dataset.eq.split(":");
+    equipItem(slot, id);
+  });
+}
+
+async function equipItem(slot, id){
+  try {
+    await updateDoc(userRef(me.uid), { [slot]: id || "" });
+    userCache.delete(me.uid);
+    renderInventory();
+  } catch(e){ toast("Fehler: " + (e.code || e.message)); }
+}
+
+$("btnResetRecord").onclick = async () => {
+  const b = $("btnResetRecord");
+  if (b.dataset.armed !== "1"){
+    b.dataset.armed = "1"; b.textContent = "Wirklich zurücksetzen?";
+    setTimeout(() => { b.dataset.armed = ""; b.textContent = "Bilanz zurücksetzen"; }, 5000);
+    return;
+  }
+  try {
+    await updateDoc(userRef(me.uid), {
+      "list.wins": 0, "list.draws": 0, "list.losses": 0, "list.games": 0, listVs: {}
+    });
+    toast("Bilanz zurückgesetzt.");
+  } catch(e){ toast("Fehler: " + (e.code || e.message)); }
+  b.dataset.armed = ""; b.textContent = "Bilanz zurücksetzen";
+};
+
+/* ══════════════════════════════════════════════════════════════
+   9) Installationshinweis
+   ══════════════════════════════════════════════════════════════ */
+let installEvent = null;
+const INSTALL_KEY = "rang_install_hidden";
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvent = e; renderInstall(); });
+
+function renderInstall(){
+  const card = $("installCard");
+  if (!card) return;
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (standalone || localStorage.getItem(INSTALL_KEY) === "1"){ card.classList.add("hidden"); return; }
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (installEvent){
+    $("installText").textContent = "Ein Tipp, und die Rangliste liegt wie eine App auf dem Bildschirm.";
+    $("installGo").classList.remove("hidden");
+  } else if (ios){
+    $("installText").innerHTML = `Im Safari-Menü <span class="share">Teilen</span> auf „Zum Home-Bildschirm“ tippen.`;
+    $("installGo").classList.add("hidden");
+  } else {
+    card.classList.add("hidden"); return;
+  }
+  card.classList.remove("hidden");
+}
+$("installGo").onclick = async () => {
+  if (!installEvent) return;
+  installEvent.prompt();
+  await installEvent.userChoice;
+  installEvent = null;
+  $("installCard").classList.add("hidden");
+};
+$("installX").onclick = () => { localStorage.setItem(INSTALL_KEY, "1"); $("installCard").classList.add("hidden"); };
+
+/* ══════════════════════════════════════════════════════════════
+   10) Push
+   ══════════════════════════════════════════════════════════════ */
+let messaging = null;
+async function initPush(){
+  if (messaging) return messaging;
+  if (!(await isSupported())) return null;
+  try {
+    await navigator.serviceWorker.register("/sw.js");
+    messaging = getMessaging(app);
+    return messaging;
+  } catch(_){ return null; }
+}
+function pushStatusText(){
+  if (!("Notification" in window)) return "Dieser Browser kann keine Meldungen zeigen.";
+  if (Notification.permission === "denied") return "In den Browsereinstellungen blockiert.";
+  const tok = localStorage.getItem("rang_push_token");
+  if (Notification.permission === "granted" && tok) return "Dieses Gerät bekommt Meldungen.";
+  return "Aus. Antippen zum Einschalten.";
+}
+function renderPushSwitch(){
+  const b = $("btnPush");
+  const on = Notification.permission === "granted" && !!localStorage.getItem("rang_push_token");
+  b.classList.toggle("on", on);
+  b.setAttribute("aria-checked", String(on));
+  b.disabled = !("Notification" in window) || Notification.permission === "denied";
+  $("pushHint").textContent = pushStatusText();
+}
+async function pushAnschalten(){
+  const m = await initPush();
+  if (!m){ toast("Push wird hier nicht unterstützt."); return; }
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted"){ renderPushSwitch(); return; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const token = await getToken(m, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    if (!token) throw new Error("kein Token");
+    await updateDoc(userRef(me.uid), { pushTokens: arrayUnion(token) });
+    localStorage.setItem("rang_push_token", token);
+    toast("Meldungen sind an.");
+  } catch(e){ toast("Push fehlgeschlagen: " + (e.message || e)); }
+  renderPushSwitch();
+}
+async function pushAusschalten(){
+  const tok = localStorage.getItem("rang_push_token");
+  if (tok){
+    try { await updateDoc(userRef(me.uid), { pushTokens: arrayRemove(tok) }); } catch(_){}
+    localStorage.removeItem("rang_push_token");
+  }
+  toast("Meldungen sind aus.");
+  renderPushSwitch();
+}
+$("btnPush").onclick = () => {
+  const on = Notification.permission === "granted" && !!localStorage.getItem("rang_push_token");
+  on ? pushAusschalten() : pushAnschalten();
+};
+function pushStatusPruefen(){ renderPushSwitch(); }
+
+async function push(to, kind, extra = {}){
+  try {
+    const idToken = await me.getIdToken();
+    await fetch("/api/notify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ idToken, to, kind, ...extra })
+    });
+  } catch(_){}
+}
+
+navigator.serviceWorker?.addEventListener?.("message", e => {
+  if (e.data?.type === "push" && e.data.body) toast(e.data.body);
+});
+
+/* ══════════════════════════════════════════════════════════════
+   11) Freunde
+   ══════════════════════════════════════════════════════════════ */
+async function getUser(uid){
+  if (userCache.has(uid)) return userCache.get(uid);
+  const s = await getDoc(userRef(uid));
+  const d = s.exists() ? { uid, ...s.data() } : null;
+  if (d) userCache.set(uid, d);
+  return d;
+}
+
+async function loadFriends(){
+  const ids = profile.friends || [];
+  $("friendCount").textContent = ids.length;
+  const list = $("friendList");
+  if (!ids.length){ list.innerHTML = `<div class="empty">Noch niemand hier. Füge unten einen Benutzernamen hinzu.</div>`; return; }
+
+  const users = (await Promise.all(ids.map(getUser))).filter(Boolean);
+  const busy = !!profile[ACTIVE];
+  list.innerHTML = users.map(u => `
+    <div class="row-item">
+      <button class="avaLink" data-profile="${esc(u.uid)}" aria-label="Profil von ${esc(u.username)}">${avaHTML(u)}</button>
+      <div class="grow">
+        <div class="name">${esc(u.username)}</div>
+        ${vsHTML(u.uid)}
+      </div>
+      <button class="btn sm yellow" data-challenge="${esc(u.uid)}" ${busy?"disabled":""} style="white-space:nowrap">Herausfordern</button>
+      <button class="iconbtn box" data-setup="${esc(u.uid)}" ${busy?"disabled":""} aria-label="Spiel einstellen" title="Spiel einstellen">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3.2"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>`).join("");
+
+  list.querySelectorAll("[data-challenge]").forEach(b => b.onclick = () => challenge(b.dataset.challenge));
+  list.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => openSetup(b.dataset.setup));
+  list.querySelectorAll("[data-profile]").forEach(b => b.onclick = () => openFriend(b.dataset.profile));
+}
+
+$("btnAddFriend").onclick = async () => {
+  const raw = $("addUsername").value.trim().toLowerCase();
+  if (!raw) return;
+  if (raw === profile.usernameLower){ toast("Das bist du selbst."); return; }
+  const btn = $("btnAddFriend"); btn.disabled = true;
+  try {
+    const s = await getDoc(doc(db,"usernames",raw));
+    if (!s.exists()){ toast("Diesen Benutzernamen gibt es nicht."); return; }
+    const fuid = s.data().uid;
+    if ((profile.friends||[]).includes(fuid)){ toast("Ihr seid schon Freunde."); return; }
+    await updateDoc(userRef(me.uid), { friends: arrayUnion(fuid) });
+    await updateDoc(userRef(fuid),   { friends: arrayUnion(me.uid) });
+    $("addUsername").value = "";
+    toast("Freund hinzugefügt.");
+  } catch(e){ toast("Fehler: " + (e.code || e.message)); }
+  finally { btn.disabled = false; }
+};
+
+let friendView = null;
+function dateDE(ts){
+  try {
+    const d = ts?.toDate ? ts.toDate() : (ts?.seconds ? new Date(ts.seconds * 1000) : null);
+    if (!d) return null;
+    return d.toLocaleDateString("de-DE", { day:"numeric", month:"long", year:"numeric" });
+  } catch(_){ return null; }
+}
+
+async function openFriend(uid){
+  const snap = await getDoc(userRef(uid));
+  if (!snap.exists()){ toast("Profil nicht gefunden."); return; }
+  const u = { uid, ...snap.data() };
+  userCache.set(uid, u);
+  friendView = u;
+
+  $("frAva").innerHTML = avaHTML(u, "lg");
+  $("frName").textContent = u.username;
+  const since = dateDE(u.createdAt);
+  $("frSince").textContent = since ? `Dabei seit ${since}` : "Beitrittsdatum unbekannt";
+  $("frVs").innerHTML = vsHTML(uid);
+  $("frTrophy").innerHTML = trophyLineHTML(u);
+
+  const st = listStats(u);
+  $("frGames").textContent  = st.games ?? 0;
+  $("frPoints").textContent = st.points ?? 0;
+  const rounds = (st.games ?? 0) * ROUNDS;
+  $("frAvg").textContent = rounds ? Math.round((st.points ?? 0) / rounds) : "—";
+
+  const busy = !!profile[ACTIVE];
+  $("frChallenge").disabled = busy;
+  $("frSetup").disabled = busy;
+  const rm = $("frRemove");
+  rm.dataset.armed = ""; rm.textContent = "Freund entfernen";
+
+  show("screen-friend");
+}
+
+$("btnFriendBack").onclick = () => show("screen-home");
+$("frChallenge").onclick   = () => { if (friendView) challenge(friendView.uid); };
+$("frSetup").onclick       = () => { if (friendView) openSetup(friendView.uid); };
+$("frRemove").onclick = async () => {
+  if (!friendView) return;
+  const rm = $("frRemove");
+  if (rm.dataset.armed !== "1"){
+    rm.dataset.armed = "1";
+    rm.textContent = `${friendView.username} wirklich entfernen?`;
+    setTimeout(() => { rm.dataset.armed = ""; rm.textContent = "Freund entfernen"; }, 5000);
+    return;
+  }
+  const uid = friendView.uid;
+  try {
+    await updateDoc(userRef(me.uid), { friends: arrayRemove(uid) });
+    try { await updateDoc(userRef(uid), { friends: arrayRemove(me.uid) }); } catch(_){}
+    userCache.delete(uid);
+    friendView = null;
+    toast("Freund entfernt.");
+    show("screen-home");
+  } catch(e){ toast("Fehler: " + (e.code || e.message)); }
+};
+
+/* ---------- Einladungen ---------- */
+function renderInvites(invites){
+  const card = $("invitesCard"), list = $("invitesList");
+  if (!invites.length){ card.classList.add("hidden"); return; }
+  card.classList.remove("hidden");
+  list.innerHTML = invites.map(i => `
+    <div class="row-item">
+      ${avaHTML({ photo: i.fromPhoto, badge: i.fromBadge, frame: i.fromFrame })}
+      <div class="grow">
+        <div class="name">${esc(i.fromName)}</div>
+        <div class="sub">${esc(i.configLabel || "fordert dich heraus")}</div>
+      </div>
+      <button class="btn sm yellow" data-accept="${esc(i.gameId)}">Annehmen</button>
+      <button class="btn sm ghost" data-decline="${esc(i.gameId)}">Nein</button>
+    </div>`).join("");
+  list.querySelectorAll("[data-accept]").forEach(b => b.onclick = () => acceptChallenge(b.dataset.accept, b));
+  list.querySelectorAll("[data-decline]").forEach(b => b.onclick = () => declineChallenge(b.dataset.decline));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   12) Spiel einstellen und herausfordern
+   ══════════════════════════════════════════════════════════════ */
+const CATEGORIES = [
+  "Geografie","Deutschland","Natur & Tiere","Weltraum","Wissenschaft","Technik",
+  "Geschichte","Sport","Musik","Film & Fernsehen","Essen & Trinken","Wirtschaft",
+  "Sprache & Literatur","Bauwerke","Alltag"
+];
+const LEVELS = [
+  { n:1, t:"Leicht",  desc:"Allgemeinwissen. Die Abstände sind groß, die Ablenker offensichtlich." },
+  { n:2, t:"Normal",  desc:"Solides Allgemeinwissen. Zwei, drei Plätze wird man vertauschen." },
+  { n:3, t:"Schwer",  desc:"Man muss genauer Bescheid wissen. Die Ablenker sind nah dran." },
+  { n:4, t:"Brutal",  desc:"Spezialwissen, enge Abstände. Hier hilft nur noch ein gutes Gedächtnis." }
+];
+
+let setupOpp = null;
+let setupCat = "";
+let setupLevel = 2;
+let lastOpponent = null;
+
+function openSetup(uid){
+  if (profile[ACTIVE]){ toast("Du bist schon in einem Spiel."); return; }
+  getUser(uid).then(u => {
+    if (!u){ toast("Spieler nicht gefunden."); return; }
+    setupOpp = u;
+    $("setupAvaBox").innerHTML = avaHTML(u, "xl");
+    $("setupName").textContent = u.username;
+    renderSetup();
+    show("screen-setup");
+  });
+}
+
+function renderSetup(){
+  const sel = $("catSelect");
+  sel.innerHTML = `<option value="">Gemischt</option>` +
+    CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  sel.value = setupCat;
+  sel.onchange = () => { setupCat = sel.value; };
+
+  $("levelPicker").innerHTML = LEVELS.map(l =>
+    `<button class="level ${setupLevel===l.n?"on":""}" data-lvl="${l.n}">
+       <div class="n">${l.n}</div><div class="t">${l.t}</div>
+     </button>`).join("");
+  $("levelPicker").querySelectorAll("[data-lvl]").forEach(b => b.onclick = () => {
+    setupLevel = Number(b.dataset.lvl); renderSetup();
+  });
+  $("levelDesc").textContent = LEVELS.find(l => l.n === setupLevel).desc;
+}
+
+$("btnSetupBack").onclick = () => show("screen-home");
+$("btnSendSetup").onclick = () => {
+  if (!setupOpp) return;
+  challenge(setupOpp.uid, { category: setupCat || null, difficulty: setupLevel });
+};
+
+function configLabel(cfg){
+  if (!cfg) return "Gemischt · Stufe 2";
+  const lvl = LEVELS.find(l => l.n === cfg.difficulty);
+  const catTxt = cfg.category ? cfg.category : "Gemischt";
+  return `${catTxt} · Stufe ${cfg.difficulty} ${lvl ? lvl.t : ""}`.trim();
+}
+
+async function challenge(oppUid, config = null){
+  if (profile[ACTIVE]){ toast("Du bist schon in einem Spiel."); return; }
+  const opp = await getUser(oppUid);
+  if (!opp){ toast("Spieler nicht gefunden."); return; }
+  lastOpponent = oppUid;
+
+  const ref = doc(collection(db, GAMES));
+  try {
+    await setDoc(ref, {
+      players: [me.uid, oppUid],
+      challenger: me.uid,
+      opponent: oppUid,
+      names: {
+        [me.uid]:  { username: profile.username, photo: profile.photo || "", badge: profile.badge || "", frame: profile.frame || "" },
+        [oppUid]:  { username: opp.username,     photo: opp.photo || "",     badge: opp.badge || "",     frame: opp.frame || "" }
+      },
+      status: "pending",
+      config: config || { category: null, difficulty: 2 },
+      round: 0,
+      rounds: [],
+      answers: {},
+      scores: {},
+      ready: {},
+      createdAt: serverTimestamp()
+    });
+    await setDoc(doc(db,"users",oppUid,INVITES,ref.id), {
+      gameId: ref.id, from: me.uid,
+      fromName: profile.username, fromPhoto: profile.photo || "",
+      fromBadge: profile.badge || "", fromFrame: profile.frame || "",
+      configLabel: configLabel(config),
+      createdAt: serverTimestamp()
+    });
+    await updateDoc(userRef(me.uid), { [ACTIVE]: ref.id });
+    push(oppUid, "listchallenge");
+    $("waitTitle").textContent = "Herausforderung verschickt";
+    $("waitText").textContent = `Warte auf ${opp.username} …`;
+    show("screen-waiting");
+    watchGame(ref.id);
+  } catch(e){ toast("Spiel konnte nicht gestartet werden: " + (e.code||e.message)); }
+}
+
+$("btnCancelChallenge").onclick = async () => {
+  if (!currentGameId) return;
+  const gid = currentGameId, opp = currentGame?.opponent;
+  try {
+    await updateDoc(gameRefOf(gid), { status:"cancelled" });
+    if (opp) await deleteDoc(doc(db,"users",opp,INVITES,gid));
+  } catch(_){}
+  await leaveGame();
+};
+
+async function acceptChallenge(gid, btn){
+  if (btn){ btn.disabled = true; btn.textContent = "Startet …"; }
+  try {
+    const gSnap = await getDoc(gameRefOf(gid));
+    if (!gSnap.exists() || gSnap.data().status !== "pending"){
+      toast("Diese Herausforderung ist nicht mehr aktiv.");
+      await deleteDoc(doc(db,"users",me.uid,INVITES,gid)).catch(()=>{});
+      return;
+    }
+    const g = gSnap.data();
+
+    $("waitTitle").textContent = "Fragen werden gebaut";
+    $("waitText").textContent = "Einen Moment — die fünf Listen entstehen gerade.";
+    show("screen-waiting");
+    $("btnCancelChallenge").classList.add("hidden");
+
+    const avoid = await collectRecentQuestions(g.challenger, g.opponent);
+    const data  = await fetchRounds(avoid, g.config);
+
+    // Öffentlicher Teil: Frage und zehn gemischte Vorschläge.
+    const publicRounds = data.map(r => ({
+      q: r.q,
+      unit: r.unit || "",
+      options: shuffle([...r.top, ...r.decoys])
+    }));
+
+    // Lösungen liegen getrennt und sind laut Regeln erst lesbar,
+    // wenn beide für die jeweilige Runde abgegeben haben.
+    await Promise.all(data.map((r, i) =>
+      setDoc(doc(db, GAMES, gid, "secrets", "r" + i), { top: r.top, note: r.note || "" })
+    ));
+
+    await updateDoc(gameRefOf(gid), {
+      status: "active",
+      rounds: publicRounds,
+      round: 0,
+      startedAt: serverTimestamp()
+    });
+    await updateDoc(userRef(me.uid), { [ACTIVE]: gid });
+    await deleteDoc(doc(db,"users",me.uid,INVITES,gid));
+    rememberQuestions(gid, publicRounds.map(r => r.q));
+    push(g.challenger, "listaccepted");
+    $("btnCancelChallenge").classList.remove("hidden");
+    watchGame(gid);
+  } catch(e){
+    $("btnCancelChallenge").classList.remove("hidden");
+    toast("Start fehlgeschlagen: " + (e.code || e.message));
+    if (btn){ btn.disabled = false; btn.textContent = "Annehmen"; }
+    show("screen-home");
+  }
+}
+
+async function declineChallenge(gid){
+  try {
+    await updateDoc(gameRefOf(gid), { status:"declined" });
+    await deleteDoc(doc(db,"users",me.uid,INVITES,gid));
+  } catch(e){ toast("Fehler: " + (e.code||e.message)); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   13) Fragen: von der Anthropic-API, notfalls aus dem Vorrat
+   ══════════════════════════════════════════════════════════════ */
+const FALLBACK_ROUNDS = [
+  { q:"Die einwohnerreichsten Städte Deutschlands", unit:"Einwohner",
+    top:["Berlin","Hamburg","München","Köln","Frankfurt am Main"],
+    decoys:["Stuttgart","Düsseldorf","Leipzig","Dortmund","Essen"] },
+  { q:"Die bevölkerungsreichsten Länder der Erde", unit:"Einwohner",
+    top:["Indien","China","USA","Indonesien","Pakistan"],
+    decoys:["Nigeria","Brasilien","Bangladesch","Russland","Mexiko"] },
+  { q:"Die höchsten Berge der Welt", unit:"Höhe über dem Meer",
+    top:["Mount Everest","K2","Kangchendzönga","Lhotse","Makalu"],
+    decoys:["Cho Oyu","Dhaulagiri","Manaslu","Nanga Parbat","Annapurna"] },
+  { q:"Die Planeten, von der Sonne aus gezählt", unit:"Abstand zur Sonne",
+    top:["Merkur","Venus","Erde","Mars","Jupiter"],
+    decoys:["Saturn","Uranus","Neptun","Ceres","Pluto"] },
+  { q:"Die größten Planeten des Sonnensystems", unit:"Durchmesser",
+    top:["Jupiter","Saturn","Uranus","Neptun","Erde"],
+    decoys:["Venus","Mars","Merkur","Pluto","Titan"] },
+  { q:"Die einwohnerreichsten Bundesländer", unit:"Einwohner",
+    top:["Nordrhein-Westfalen","Bayern","Baden-Württemberg","Niedersachsen","Hessen"],
+    decoys:["Rheinland-Pfalz","Sachsen","Berlin","Schleswig-Holstein","Brandenburg"] },
+  { q:"Die flächengrößten Bundesländer", unit:"Fläche",
+    top:["Bayern","Niedersachsen","Baden-Württemberg","Nordrhein-Westfalen","Brandenburg"],
+    decoys:["Mecklenburg-Vorpommern","Hessen","Sachsen-Anhalt","Rheinland-Pfalz","Thüringen"] },
+  { q:"Die Ozeane nach Fläche", unit:"Fläche",
+    top:["Pazifik","Atlantik","Indischer Ozean","Südlicher Ozean","Arktischer Ozean"],
+    decoys:["Mittelmeer","Karibisches Meer","Nordsee","Ostsee","Rotes Meer"] },
+  { q:"Die Kontinente nach Fläche", unit:"Fläche",
+    top:["Asien","Afrika","Nordamerika","Südamerika","Antarktika"],
+    decoys:["Europa","Australien","Ozeanien","Grönland","Arabische Halbinsel"] },
+  { q:"Die größten Inseln der Erde", unit:"Fläche",
+    top:["Grönland","Neuguinea","Borneo","Madagaskar","Baffininsel"],
+    decoys:["Sumatra","Honshū","Großbritannien","Island","Sizilien"] },
+  { q:"Die größten Seen Deutschlands", unit:"Fläche",
+    top:["Bodensee","Müritz","Chiemsee","Schweriner See","Starnberger See"],
+    decoys:["Ammersee","Plöner See","Steinhuder Meer","Walchensee","Tegernsee"] },
+  { q:"Die längsten Flüsse Deutschlands", unit:"Länge im Land",
+    top:["Rhein","Elbe","Donau","Main","Weser"],
+    decoys:["Saale","Spree","Mosel","Havel","Neckar"] },
+  { q:"Die häufigsten Buchstaben der deutschen Sprache", unit:"Häufigkeit",
+    top:["E","N","I","S","R"],
+    decoys:["A","T","D","H","U"] },
+  { q:"Die höchsten Gebäude der Welt", unit:"Höhe",
+    top:["Burj Khalifa","Merdeka 118","Shanghai Tower","Abraj Al Bait","Ping An Finance Center"],
+    decoys:["Lotte World Tower","One World Trade Center","Taipei 101","Empire State Building","Eiffelturm"] }
+];
+
+const RECENT_LIMIT = 120;
+
+async function collectRecentQuestions(uidA, uidB){
+  const out = new Set();
+  for (const uid of [uidA, uidB]){
+    try {
+      const s = await getDoc(userRef(uid));
+      (s.exists() ? (s.data().recentLists || []) : []).forEach(q => out.add(q));
+    } catch(_){}
+  }
+  return [...out].slice(-80);
+}
+
+async function rememberQuestions(gid, questions){
+  const key = "rang_q_" + gid;
+  if (localStorage.getItem(key)) return;
+  localStorage.setItem(key, "1");
+  const have = (profile?.recentLists || []).filter(q => !questions.includes(q));
+  try { await updateDoc(userRef(me.uid), { recentLists: [...have, ...questions].slice(-RECENT_LIMIT) }); } catch(_){}
+}
+
+function fallbackRounds(){
+  return shuffle(FALLBACK_ROUNDS).slice(0, ROUNDS).map(r => ({
+    q: r.q, unit: r.unit, top: r.top.slice(), decoys: r.decoys.slice(), note: ""
+  }));
+}
+
+function sane(r){
+  return r && typeof r.q === "string" && r.q.trim()
+    && Array.isArray(r.top) && r.top.length === 5
+    && Array.isArray(r.decoys) && r.decoys.length === 5
+    && new Set([...r.top, ...r.decoys].map(x => String(x).toLowerCase().trim())).size === 10;
+}
+
+async function fetchRounds(avoid = [], config = null){
+  try {
+    const r = await fetch(LISTS_ENDPOINT, {
+      method:"POST", headers:{"content-type":"application/json"},
+      body: JSON.stringify({
+        avoid,
+        category: config?.category || null,
+        difficulty: config?.difficulty ?? 2,
+        count: ROUNDS
+      })
+    });
+    if (!r.ok) throw new Error("http " + r.status);
+    const d = await r.json();
+    const clean = (d.rounds || [])
+      .map(x => ({
+        q: String(x.q || "").trim(),
+        unit: String(x.unit || "").trim(),
+        top: (x.top || []).map(s => String(s).trim()),
+        decoys: (x.decoys || []).map(s => String(s).trim()),
+        note: String(x.note || "").trim()
+      }))
+      .filter(sane);
+    if (clean.length >= ROUNDS) return clean.slice(0, ROUNDS);
+    // Zu wenig Brauchbares: mit dem Vorrat auffüllen.
+    const fill = fallbackRounds().filter(f => !clean.some(c => c.q === f.q));
+    return [...clean, ...fill].slice(0, ROUNDS);
+  } catch(_){
+    return fallbackRounds();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   14) Spielverlauf
+   ══════════════════════════════════════════════════════════════ */
+function once(key){
+  if (sideEffectGuard.has(key)) return false;
+  sideEffectGuard.add(key);
+  return true;
+}
+const rid = n => "r" + n;
+function nameOf(uid){ return currentGame?.names?.[uid]?.username ?? "dein Gegner"; }
+function oppUid(){ return currentGame.players.find(p => p !== me.uid); }
+
+function watchGame(gid){
+  if (unsubGame) unsubGame();
+  currentGameId = gid;
+  draftRound = -1;
+
+  unsubGame = onSnapshot(
+    gameRefOf(gid),
+    { includeMetadataChanges: true },
+    async snap => {
+      if (!snap.exists()){ await leaveGame(); return; }
+      if (snap.metadata.hasPendingWrites) return;
+
+      currentGame = snap.data();
+      const s = currentGame.status;
+
+      if (s === "pending"){
+        if (currentGame.challenger === me.uid){
+          $("waitTitle").textContent = "Herausforderung verschickt";
+          $("waitText").textContent = `Warte auf ${nameOf(currentGame.opponent)} …`;
+          show("screen-waiting");
+        }
+        return;
+      }
+      if (s === "declined"){  toast("Die Herausforderung wurde abgelehnt.");     await leaveGame(); return; }
+      if (s === "cancelled"){ toast("Das Spiel wurde abgebrochen.");             await leaveGame(); return; }
+      if (s === "active"){    await enterActive(gid);   return; }
+      if (s === "finished"){  await showFinal(gid);     return; }
+    }
+  );
+}
+
+async function enterActive(gid){
+  const g = currentGame;
+  const n = g.round ?? 0;
+  const key = rid(n);
+  const opp = oppUid();
+  const answers = g.answers?.[key] || {};
+  const mine = answers[me.uid];
+  const theirs = answers[opp];
+
+  renderDuelHead();
+
+  if (!mine){ renderRound(n); return; }
+
+  if (!theirs){
+    $("waitOppText").textContent = `Warte auf ${nameOf(opp)} …`;
+    $("waitOppList").innerHTML = mine.map((v,i) =>
+      `<div class="rrow"><span class="n">Platz ${i+1}</span><span class="q">${esc(v)}</span></div>`).join("");
+    show("screen-wait-opp");
+    return;
+  }
+
+  // Beide haben abgegeben — Lösung darf jetzt gelesen werden.
+  const sol = await loadSolution(gid, n);
+  if (!sol) return;
+
+  // Eigenes Ergebnis einmalig festhalten, damit der Endstand für
+  // beide Seiten aus denselben Zahlen entsteht.
+  const myScore = scoreOf(mine, sol.top);
+  if (g.scores?.[key]?.[me.uid] === undefined && once("score:" + gid + ":" + n)){
+    try { await updateDoc(gameRefOf(gid), { [`scores.${key}.${me.uid}`]: myScore }); } catch(_){}
+  }
+
+  const ready = g.ready?.[key] || {};
+  renderReveal(n, sol, mine, theirs, ready[me.uid]);
+
+  if (ready[me.uid] && ready[opp] && once("adv:" + gid + ":" + n)){
+    try {
+      if (n + 1 < ROUNDS){
+        await updateDoc(gameRefOf(gid), { round: n + 1 });
+      } else {
+        await updateDoc(gameRefOf(gid), { status: "finished", finishedAt: serverTimestamp() });
+        push(opp, "listdone");
+      }
+    } catch(_){}
+  }
+}
+
+async function loadSolution(gid, n){
+  const ck = gid + ":" + rid(n);
+  if (solutionCache.has(ck)) return solutionCache.get(ck);
+  const s = await getDocRetry(doc(db, GAMES, gid, "secrets", rid(n)), 6);
+  if (!s) return null;
+  const d = s.data();
+  solutionCache.set(ck, d);
+  return d;
+}
+
+/* ---------- Punkte ---------- */
+function pointsFor(pick, idx, top){
+  if (!pick) return 0;
+  const at = top.findIndex(t => norm(t) === norm(pick));
+  if (at === -1) return 0;
+  if (at === idx) return 10;
+  if (Math.abs(at - idx) === 1) return 5;
+  return 0;
+}
+function scoreOf(list, top){
+  return (list || []).reduce((sum, pick, i) => sum + pointsFor(pick, i, top), 0);
+}
+const norm = s => String(s ?? "").toLowerCase().replace(/\s+/g," ").trim();
+
+/* ---------- Kopfzeile ---------- */
+function renderDuelHead(){
+  const opp = oppUid();
+  $("gMeBox").innerHTML  = avaHTML(currentGame.names?.[me.uid]);
+  $("gOppBox").innerHTML = avaHTML(currentGame.names?.[opp]);
+  $("gameConfig").innerHTML = `<span class="pill">${esc(configLabel(currentGame.config))}</span>`;
+}
+function barHTML(n, boxId){
+  $(boxId).innerHTML = Array.from({length: ROUNDS}, (_, i) =>
+    `<i class="${i < n ? "done" : i === n ? "now" : ""}"></i>`).join("");
+}
+
+/* ---------- Runde spielen ---------- */
+function renderRound(n){
+  const r = currentGame.rounds?.[n];
+  if (!r){ toast("Die Runde konnte nicht geladen werden."); return; }
+
+  if (draftRound !== n){ draft = Array(5).fill(null); draftRound = n; }
+
+  barHTML(n, "rndBar");
+  $("roundLabel").textContent = `Runde ${n+1} von ${ROUNDS}`;
+  $("roundQuestion").textContent = r.q;
+  $("roundUnit").textContent = r.unit ? `sortiert nach: ${r.unit}` : "";
+
+  renderSlots();
+  renderOptions(r.options || []);
+  show("screen-round");
+}
+
+function renderSlots(){
+  const firstEmpty = draft.findIndex(x => x === null);
+  $("slotBox").innerHTML = draft.map((v, i) => `
+    <button class="slot ${v?"filled":""} ${!v && i===firstEmpty ? "next":""}" data-slot="${i}">
+      <span class="rk">${i+1}</span>
+      ${v ? `<span class="val">${esc(v)}</span><span class="x">×</span>`
+          : `<span class="empty-t">frei</span>`}
+    </button>`).join("");
+  $("slotBox").querySelectorAll("[data-slot]").forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.slot);
+    if (draft[i]){ draft[i] = null; renderSlots(); renderOptions(currentGame.rounds[draftRound].options); }
+  });
+  const full = draft.every(Boolean);
+  $("btnSubmitList").disabled = !full;
+  $("submitHint").textContent = full
+    ? "Nach dem Abgeben lässt sich nichts mehr ändern."
+    : `Noch ${draft.filter(x => !x).length} Plätze frei.`;
+}
+
+function renderOptions(options){
+  $("optBox").innerHTML = options.map(o => {
+    const used = draft.some(d => d === o);
+    return `<button class="chip ${used?"used":""}" data-opt="${esc(o)}" ${used?"disabled":""}>${esc(o)}</button>`;
+  }).join("");
+  $("optBox").querySelectorAll("[data-opt]").forEach(b => b.onclick = () => {
+    const i = draft.findIndex(x => x === null);
+    if (i === -1){ toast("Alle fünf Plätze sind belegt."); return; }
+    draft[i] = b.dataset.opt;
+    renderSlots();
+    renderOptions(options);
+  });
+}
+
+$("btnSubmitList").onclick = async () => {
+  if (!currentGameId || !draft.every(Boolean)) return;
+  const n = currentGame.round ?? 0;
+  const btn = $("btnSubmitList"); btn.disabled = true; btn.textContent = "Wird abgegeben …";
+  try {
+    await updateDoc(gameRefOf(currentGameId), { [`answers.${rid(n)}.${me.uid}`]: draft.slice() });
+    push(oppUid(), "listturn");
+  } catch(e){
+    toast("Abgeben fehlgeschlagen: " + (e.code || e.message));
+    btn.disabled = false;
+  }
+  btn.textContent = "Liste abgeben";
+};
+
+/* ---------- Auflösung ---------- */
+function renderReveal(n, sol, mine, theirs, iAmReady){
+  const opp = oppUid();
+  const r = currentGame.rounds[n];
+  const myPts  = scoreOf(mine, sol.top);
+  const oppPts = scoreOf(theirs, sol.top);
+
+  barHTML(n, "revBar");
+  $("revLabel").textContent = `Runde ${n+1} von ${ROUNDS}`;
+  $("revQuestion").textContent = r.q;
+
+  $("revScore").innerHTML =
+    `<div class="${myPts > oppPts ? "win":""}"><div class="n">${myPts}</div><div class="l">Du</div></div>
+     <div class="${oppPts > myPts ? "win":""}"><div class="n">${oppPts}</div><div class="l">${esc(nameOf(opp))}</div></div>`;
+
+  $("revList").innerHTML = sol.top.map((t, i) => {
+    const mp = pointsFor(mine[i], i, sol.top);
+    const op = pointsFor(theirs[i], i, sol.top);
+    const cls = p => p === 10 ? "p10" : p === 5 ? "p5" : "p0";
+    return `<div class="rev">
+      <div class="rk">${i+1}</div>
+      <div class="grow">
+        <div class="sol">${esc(t)}</div>
+        <div class="picks">
+          <div class="pk"><span class="who">Du</span><span class="txt">${esc(mine[i] || "—")}</span><span class="p ${cls(mp)}">+${mp}</span></div>
+          <div class="pk"><span class="who">${esc(nameOf(opp)).slice(0,7)}</span><span class="txt">${esc(theirs[i] || "—")}</span><span class="p ${cls(op)}">+${op}</span></div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  $("revNote").textContent = sol.note || "";
+
+  const b = $("btnNextRound");
+  const last = n + 1 >= ROUNDS;
+  if (iAmReady){
+    b.disabled = true;
+    b.textContent = `Warte auf ${nameOf(opp)} …`;
+  } else {
+    b.disabled = false;
+    b.textContent = last ? "Endstand ansehen" : "Weiter zu Runde " + (n + 2);
+  }
+  show("screen-reveal");
+}
+
+$("btnNextRound").onclick = async () => {
+  if (!currentGameId) return;
+  const n = currentGame.round ?? 0;
+  const b = $("btnNextRound"); b.disabled = true;
+  try {
+    await updateDoc(gameRefOf(currentGameId), { [`ready.${rid(n)}.${me.uid}`]: true });
+  } catch(e){ toast("Fehler: " + (e.code || e.message)); b.disabled = false; }
+};
+
+/* ---------- Abbrechen ---------- */
+async function abortGame(btn){
+  if (!currentGameId) return;
+  if (btn.dataset.armed !== "1"){
+    btn.dataset.armed = "1";
+    const old = btn.textContent;
+    btn.textContent = "Wirklich abbrechen?";
+    setTimeout(() => { btn.dataset.armed = ""; btn.textContent = old; }, 5000);
+    return;
+  }
+  try { await updateDoc(gameRefOf(currentGameId), { status: "cancelled" }); } catch(_){}
+  await leaveGame();
+}
+$("btnAbort").onclick  = () => abortGame($("btnAbort"));
+$("btnAbort2").onclick = () => abortGame($("btnAbort2"));
+
+/* ══════════════════════════════════════════════════════════════
+   15) Endstand
+   ══════════════════════════════════════════════════════════════ */
+async function showFinal(gid){
+  const g = currentGame;
+  const opp = oppUid();
+
+  // Alle fünf Lösungen einsammeln — nach Spielende sind sie freigegeben.
+  const sols = [];
+  for (let i = 0; i < ROUNDS; i++) sols.push(await loadSolution(gid, i));
+
+  const rows = [];
+  let myTotal = 0, oppTotal = 0, myRounds = 0, oppRounds = 0, perfect = 0;
+
+  for (let i = 0; i < ROUNDS; i++){
+    const key = rid(i);
+    const a = g.answers?.[key] || {};
+    const top = sols[i]?.top || [];
+    const mp = g.scores?.[key]?.[me.uid] ?? scoreOf(a[me.uid], top);
+    const op = g.scores?.[key]?.[opp]    ?? scoreOf(a[opp], top);
+    myTotal += mp; oppTotal += op;
+    if (mp > op) myRounds++; else if (op > mp) oppRounds++;
+    if (mp === 50) perfect++;
+    rows.push({ q: g.rounds?.[i]?.q || `Runde ${i+1}`, mp, op });
+  }
+
+  let outcome = "draw";
+  if (myRounds > oppRounds) outcome = "win";
+  else if (oppRounds > myRounds) outcome = "lose";
+  else if (myTotal > oppTotal) outcome = "win";
+  else if (oppTotal > myTotal) outcome = "lose";
+
+  const goldGained = myRounds * 4 + perfect * 5 + (outcome === "win" ? 12 : outcome === "draw" ? 6 : 0);
+
+  await recordStats(gid, { outcome, myTotal, myRounds, perfect, oppId: opp, gold: goldGained });
+
+  const v = $("finalVerdict");
+  v.classList.remove("win","lose","draw");
+  v.classList.add(outcome);
+  $("finalEyebrow").textContent = `${myRounds} : ${oppRounds} Runden`;
+  $("finalBig").textContent =
+    outcome === "win" ? "Gewonnen!" : outcome === "lose" ? "Verloren." : "Unentschieden.";
+
+  const tiebreak = myRounds === oppRounds
+    ? (myTotal === oppTotal ? " Auch bei den Punkten steht es gleich." : ` Die Gesamtpunkte haben entschieden: ${myTotal} zu ${oppTotal}.`)
+    : "";
+  $("finalText").textContent =
+    `${myTotal} Punkte für dich, ${oppTotal} für ${nameOf(opp)}.${tiebreak}` +
+    (goldGained ? ` +${goldGained} Gold.` : "");
+
+  $("finalScore").innerHTML =
+    `<div class="${outcome==="win"?"win":""}"><div class="n">${myTotal}</div><div class="l">Du</div></div>
+     <div class="${outcome==="lose"?"win":""}"><div class="n">${oppTotal}</div><div class="l">${esc(nameOf(opp))}</div></div>`;
+
+  $("finalTable").innerHTML = rows.map((r, i) => `
+    <div class="rrow ${r.mp>r.op?"mewin":r.op>r.mp?"oppwin":""}">
+      <span class="n">Runde ${i+1}</span>
+      <span class="q">${esc(r.q)}</span>
+      <span class="s"><b>${r.mp}</b> : <b>${r.op}</b></span>
+    </div>`).join("");
+
+  lastOpponent = opp;
+  show("screen-final");
+
+  if (outcome === "win" && !fxRunning) setTimeout(() => celebrate(goldGained), 140);
+}
+
+async function recordStats(gid, { outcome, myTotal, myRounds, perfect, oppId, gold }){
+  const key = "rang_rec_" + gid;
+  if (localStorage.getItem(key)) return;
+  localStorage.setItem(key, "1");
+
+  const st = listStats(profile);
+  const nextStreak = outcome === "win" ? (st.streak ?? 0) + 1 : 0;
+
+  const patch = {
+    "list.games":     increment(1),
+    "list.points":    increment(myTotal),
+    "list.roundWins": increment(myRounds),
+    "list.perfect":   increment(perfect),
+    "list.streak":    nextStreak,
+    "list.bestStreak": Math.max(st.bestStreak ?? 0, nextStreak)
+  };
+  if (outcome === "win")  patch["list.wins"]   = increment(1);
+  if (outcome === "lose") patch["list.losses"] = increment(1);
+  if (outcome === "draw") patch["list.draws"]  = increment(1);
+  if (oppId) patch[`listVs.${oppId}.${outcome === "win" ? "w" : outcome === "lose" ? "l" : "d"}`] = increment(1);
+  if (gold){
+    patch["gold"] = increment(gold);
+    patch["goldTotal"] = increment(gold);
+  }
+  try { await updateDoc(userRef(me.uid), patch); } catch(_){}
+}
+
+$("btnBackHome").onclick = () => leaveGame();
+$("btnRematch").onclick = async () => {
+  const opp = lastOpponent;
+  const cfg = currentGame?.config || null;
+  await leaveGame();
+  if (opp) setTimeout(() => challenge(opp, cfg), 300);
+};
+
+async function leaveGame(){
+  if (unsubGame){ unsubGame(); unsubGame = null; }
+  currentGameId = currentGame = null;
+  sideEffectGuard = new Set();
+  solutionCache.clear();
+  draft = []; draftRound = -1;
+  try { await updateDoc(userRef(me.uid), { [ACTIVE]: null }); } catch(_){}
+  userCache.clear();
+  show("screen-home");
+  if (profile) loadFriends();
+}
+
+/* ---------- Sieganimation ---------- */
+const FX_COLORS = ["#FFC93C","#F2557F","#EFEDF7","#4FD6C0","#FFE08A"];
+let fxRunning = false;
+
+function celebrate(goldGained){
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const burst = $("pointsBurst");
+  burst.textContent = "+" + goldGained;
+  burst.classList.remove("go");
+  void burst.offsetWidth;
+  burst.classList.add("go");
+
+  const v = $("finalVerdict");
+  v.classList.remove("pop");
+  void v.offsetWidth;
+  v.classList.add("pop");
+
+  const cv = $("fx");
+  const ctx = cv.getContext("2d");
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = window.innerWidth, H = window.innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  cv.classList.add("on");
+
+  const box = v.getBoundingClientRect();
+  const ox = box.left + box.width/2;
+  const oy = box.top + box.height/2;
+
+  const bits = [];
+  for (let i = 0; i < 130; i++){
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 5 + Math.random() * 12;
+    bits.push({
+      x: ox, y: oy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 4,
+      w: 5 + Math.random() * 7,
+      h: 8 + Math.random() * 11,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - .5) * .3,
+      color: FX_COLORS[(Math.random() * FX_COLORS.length) | 0],
+      wobble: Math.random() * Math.PI * 2,
+      life: 1
+    });
+  }
+
+  const t0 = performance.now();
+  fxRunning = true;
+
+  function frame(now){
+    const t = now - t0;
+    ctx.clearRect(0,0,W,H);
+
+    const r = 10 + t * 0.55;
+    if (r < Math.max(W,H)){
+      ctx.beginPath();
+      ctx.arc(ox, oy, r, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(255,201,60,${Math.max(0, .55 * (1 - r / (Math.max(W,H)*0.8)))})`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    let alive = 0;
+    for (const b of bits){
+      b.vy += 0.38;
+      b.vx *= 0.992;
+      b.wobble += 0.14;
+      b.x += b.vx + Math.sin(b.wobble) * 0.9;
+      b.y += b.vy;
+      b.rot += b.vr;
+      if (t > 1200) b.life -= 0.012;
+      if (b.y > H + 40 || b.life <= 0) continue;
+      alive++;
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.rot);
+      ctx.globalAlpha = Math.max(0, b.life);
+      ctx.fillStyle = b.color;
+      ctx.fillRect(-b.w/2, -b.h/2, b.w * Math.abs(Math.cos(b.wobble * .6)), b.h);
+      ctx.restore();
+    }
+
+    if (alive > 0 && t < 5000) requestAnimationFrame(frame);
+    else { ctx.clearRect(0,0,W,H); cv.classList.remove("on"); fxRunning = false; }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   16) Statistiken
+   ══════════════════════════════════════════════════════════════ */
+$("btnStats").onclick     = async () => { await renderLeaderboard(); show("screen-stats"); };
+$("btnStatsBack").onclick = () => show("screen-home");
+
+function renderStats(){
+  const s = listStats(profile);
+  $("stAvaBox").innerHTML = avaHTML(meLook());
+  $("stName").textContent = profile.username;
+  $("stGames").textContent   = s.games ?? 0;
+  $("stWins").textContent    = s.wins ?? 0;
+  $("stPoints").textContent  = s.points ?? 0;
+  $("stRounds").textContent  = s.roundWins ?? 0;
+  $("stPerfect").textContent = s.perfect ?? 0;
+  $("stBest").textContent    = s.bestStreak ?? 0;
+  $("stTrophy").innerHTML = trophyLineHTML(profile);
+  const rounds = (s.games ?? 0) * ROUNDS;
+  $("stRate").textContent = rounds
+    ? `Ø ${Math.round((s.points ?? 0) / rounds)} von 50 Punkten pro Runde`
+    : "Noch kein Spiel gespielt";
+}
+
+async function renderLeaderboard(){
+  const ids = [me.uid, ...(profile.friends || [])];
+  const users = (await Promise.all(ids.map(getUser))).filter(Boolean);
+  users.sort((a,b) => (listStats(b).points ?? 0) - (listStats(a).points ?? 0));
+  $("leaderboard").innerHTML = users.map((u,i) => `
+    <div class="row-item">
+      <span class="sub" style="width:22px;font-family:var(--mono);color:var(--muted)">${i+1}</span>
+      ${avaHTML(u)}
+      <div class="grow">
+        <div class="name">${esc(u.username)}${u.uid===me.uid?" · du":""}</div>
+        ${recordHTML(u)}
+      </div>
+      <div style="font-family:var(--display);font-weight:800;font-size:1.3rem;color:var(--yellow)">${listStats(u).points ?? 0}</div>
+    </div>`).join("") || `<div class="empty">Noch keine Daten.</div>`;
+}
+</script>
+</body>
+</html>
