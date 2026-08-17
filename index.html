@@ -390,6 +390,36 @@
   }
   .share{display:inline-block;vertical-align:-2px;color:var(--yellow)}
 
+  /* ---------- Adminfenster ---------- */
+  textarea{
+    width:100%;padding:13px 14px;border-radius:13px;border:1px solid var(--line);
+    background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:.8rem;
+    line-height:1.5;resize:vertical
+  }
+  textarea:focus{outline:2px solid var(--yellow);outline-offset:1px}
+  .adminbadge{
+    display:inline-block;font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;
+    text-transform:uppercase;padding:3px 7px;border-radius:999px;
+    background:rgba(255,201,60,.18);color:var(--yellow);margin-left:6px
+  }
+  .del{
+    flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:var(--ink);
+    border:1px solid var(--line);color:var(--magenta);font-size:1rem;line-height:1
+  }
+  .arch{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+  .arch:first-child{border-top:0}
+  .arch .qq{font-weight:700;font-size:.95rem;line-height:1.3}
+  .arch .meta{font-family:var(--mono);font-size:.64rem;color:var(--muted);margin-top:3px}
+  .arch .sol{font-size:.82rem;color:#CFCEE4;margin-top:6px;line-height:1.5}
+  .arch .sol b{color:var(--paper);font-weight:700}
+  .arch .sol .v{font-family:var(--mono);font-size:.72rem;color:var(--yellow)}
+  .arch .dec{font-size:.78rem;color:var(--muted);margin-top:4px;line-height:1.5}
+  .gm{display:flex;gap:10px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}
+  .gm:first-child{border-top:0}
+  .gm .who{font-weight:700;font-size:.93rem}
+  .gm .meta{font-family:var(--mono);font-size:.64rem;color:var(--muted);margin-top:2px}
+  .gm .sc{font-family:var(--display);font-weight:800;font-size:1.05rem;flex:0 0 auto}
+
   /* ---------- Login ---------- */
   .brand{text-align:center;padding-top:8vh}
   .logo{width:104px;height:104px;margin:0 auto;display:block;filter:drop-shadow(0 18px 34px rgba(0,0,0,.55))}
@@ -702,6 +732,12 @@
       <button class="btn ghost" id="btnInventory">Inventar öffnen</button>
     </div>
 
+    <div class="card hidden" id="adminCard">
+      <label>Verwaltung</label>
+      <p class="dim" style="font-size:.85rem;margin:0 0 12px">Spieler, Spiele und das Fragenarchiv einsehen.</p>
+      <button class="btn ghost" id="btnAdmin">Adminfenster öffnen</button>
+    </div>
+
     <div class="card">
       <label>Benachrichtigungen</label>
       <div class="row" style="justify-content:space-between;gap:14px">
@@ -721,6 +757,86 @@
 
     <div class="stack">
       <button class="btn yellow" id="optSave" disabled>Speichern</button>
+    </div>
+  </section>
+
+  <!-- ADMINFENSTER -->
+  <section id="screen-admin" class="screen">
+    <div class="head"><button class="link" id="btnAdminBack">← Optionen</button></div>
+    <h1>Adminfenster</h1>
+
+    <div class="card stack">
+      <h3>Überblick</h3>
+      <div class="statgrid" id="admStats1"></div>
+      <div class="statgrid" id="admStats2"></div>
+      <div class="statgrid" id="admStats3"></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h3>Spieler</h3>
+        <span class="pill" id="userCount">0</span>
+      </div>
+      <input type="text" id="userSearch" placeholder="Name suchen" autocomplete="off" style="margin-top:10px" />
+      <div id="userList" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h3>Verschenken</h3>
+      <p class="dim" style="font-size:.82rem;margin:2px 0 10px">Gold und Gegenstände landen sofort im Konto — auch bei Imposter.</p>
+      <label for="giftUser">Empfänger</label>
+      <select id="giftUser"></select>
+      <div style="height:10px"></div>
+      <label for="giftItem">Gegenstand</label>
+      <select id="giftItem"></select>
+      <button class="btn ghost sm" id="btnGiftItem" style="width:100%;margin-top:10px">Gegenstand schenken</button>
+      <div style="height:14px"></div>
+      <label for="giftGold">Gold</label>
+      <div class="row">
+        <input type="text" id="giftGold" placeholder="z. B. 250" inputmode="numeric" autocomplete="off" />
+        <button class="btn sm yellow" id="btnGiftGold" style="flex:0 0 auto">Senden</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h3>Spiele</h3>
+        <span class="pill" id="gameCount">0</span>
+      </div>
+      <input type="text" id="gameSearch" placeholder="Nach Spieler filtern" autocomplete="off" style="margin-top:10px" />
+      <div id="gameList" style="margin-top:8px"></div>
+      <button class="btn ghost sm" id="btnGameReload" style="width:100%;margin-top:12px">Neu laden</button>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h3>Fragenarchiv</h3>
+        <span class="pill" id="archCount">0</span>
+      </div>
+      <p class="dim" style="font-size:.82rem;margin:6px 0 0">Jede Frage mit Lösung, Ablenkern und Zahlenwerten. Daraus bedienen sich neue Spiele, bevor die API gefragt wird.</p>
+      <input type="text" id="archSearch" placeholder="Frage oder Eintrag suchen" autocomplete="off" style="margin-top:10px" />
+      <div id="archList" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn ghost sm grow" id="btnArchReload">Neu laden</button>
+        <button class="btn ghost sm grow" id="btnArchExport">Exportieren</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Frage von Hand anlegen</h3>
+      <p class="dim" style="font-size:.82rem;margin:2px 0 10px">Eine Runde oder eine Liste davon als JSON — genau im Format des Exports.</p>
+      <textarea id="archImport" rows="7" spellcheck="false" placeholder='[{"q":"Die höchsten Berge der Welt","unit":"Höhe über dem Meer","top":["…","…","…","…","…"],"decoys":["…","…","…","…","…"],"values":{"…":"8.849 m"},"note":"","category":"Geografie","difficulty":2}]'></textarea>
+      <button class="btn ghost sm" id="btnArchImport" style="width:100%;margin-top:10px">Ins Archiv übernehmen</button>
+    </div>
+
+    <div class="card">
+      <h3>Admins</h3>
+      <div id="adminList" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:14px">
+        <input type="text" id="adminUser" placeholder="Benutzername" autocomplete="off" />
+        <button class="btn sm yellow" id="btnAdminAdd" style="flex:0 0 auto">Ernennen</button>
+      </div>
+      <p class="dim" style="font-size:.8rem;margin-top:10px">Gilt für beide Spiele — die Liste ist dieselbe wie bei Imposter.</p>
     </div>
   </section>
 
@@ -1043,7 +1159,7 @@ import { getMessaging, getToken, isSupported } from "https://www.gstatic.com/fir
 import {
   getFirestore, initializeFirestore,
   doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  query, where, limit, onSnapshot, runTransaction,
+  query, where, limit, orderBy, onSnapshot, runTransaction,
   arrayUnion, arrayRemove, increment, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
@@ -1339,6 +1455,7 @@ function startSession(seed){
      statt des Namens da. */
   if (seed){
     profile = seed;
+    loadAdmins();
     renderHome();
     renderStats();
     loadFriends();
@@ -1349,6 +1466,7 @@ function startSession(seed){
     if (!snap.exists()) return;
     profile = snap.data();
     countLoginDay();
+    loadAdmins();
     pushStatusPruefen();
     renderHome();
     renderStats();
@@ -3005,6 +3123,361 @@ async function renderLeaderboard(){
       <div style="font-family:var(--display);font-weight:800;font-size:1.3rem;color:var(--yellow)">${listStats(u).points ?? 0}</div>
     </div>`).join("") || `<div class="empty">Noch keine Daten.</div>`;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   17) Adminfenster
+   Die Collection "admins" ist dieselbe wie bei Imposter — wer dort
+   ernannt wurde, kommt auch hier hinein. Der Gründer wird am
+   Benutzernamen erkannt und lässt sich nicht entziehen.
+   ══════════════════════════════════════════════════════════════ */
+const ROOT_ADMIN = "dachsi";
+let adminUids = new Set();
+let allUsers = [];
+let gameCache = [];
+let archCache = [];
+
+const isRootAdmin = u => (u?.usernameLower || "") === ROOT_ADMIN;
+const amAdmin = () => !!me && (isRootAdmin(profile) || adminUids.has(me.uid));
+
+async function loadAdmins(){
+  try {
+    const snap = await getDocs(collection(db, "admins"));
+    adminUids = new Set(snap.docs.map(d => d.id));
+  } catch(_){ adminUids = new Set(); }
+  $("adminCard").classList.toggle("hidden", !amAdmin());
+}
+
+$("btnAdminBack").onclick = () => show("screen-options");
+$("btnAdmin").onclick = async () => {
+  if (!amAdmin()){ toast("Kein Zugriff."); return; }
+  show("screen-admin");
+  await loadUsers();
+  await loadGames();
+  await loadArchive();
+  await renderAdminList();
+  renderAdminStats();
+};
+
+function statBox(n, l, color){
+  return `<div class="stat"><div class="n"${color?` style="color:${color}"`:""}>${n}</div><div class="l">${esc(l)}</div></div>`;
+}
+
+/* ---------- Spieler ---------- */
+async function loadUsers(){
+  try {
+    const snap = await getDocs(collection(db, "users"));
+    allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+  } catch(e){
+    $("userList").innerHTML = `<div class="empty">Fehler: ${esc(e.code || e.message)}</div>`;
+    return;
+  }
+  renderUsers();
+  renderGiftForm();
+}
+
+function renderUsers(){
+  const term = $("userSearch").value.trim().toLowerCase();
+  const rows = (term ? allUsers.filter(u => (u.username || "").toLowerCase().includes(term)) : allUsers)
+    .slice()
+    .sort((a, b) => (listStats(b).games ?? 0) - (listStats(a).games ?? 0));
+  $("userCount").textContent = `${rows.length}${term ? " / " + allUsers.length : ""}`;
+
+  $("userList").innerHTML = rows.length ? rows.map(u => {
+    const st = listStats(u);
+    const admin = adminUids.has(u.uid) || isRootAdmin(u);
+    return `<div class="row-item">
+      ${avaHTML(u)}
+      <div class="grow">
+        <div class="name">${esc(u.username || "ohne Namen")}${admin ? `<span class="adminbadge">Admin</span>` : ""}</div>
+        <div class="record"><span class="w">${st.wins ?? 0}</span><span class="sep">/</span><span class="d">${st.draws ?? 0}</span><span class="sep">/</span><span class="l">${st.losses ?? 0}</span>
+          <span style="color:var(--muted)"> · ${u.gold ?? 0} Gold · ${st.points ?? 0} Punkte</span></div>
+        <div class="meta" style="font-family:var(--mono);font-size:.64rem;color:var(--muted);margin-top:2px">
+          ${st.games ?? 0} Spiele · ${st.roundWins ?? 0} Runden · ${st.perfect ?? 0}× voll · zuletzt ${esc(u.lastLogin || "—")}
+        </div>
+      </div>
+    </div>`;
+  }).join("") : `<div class="empty">Niemand gefunden.</div>`;
+}
+$("userSearch").addEventListener("input", renderUsers);
+
+function renderGiftForm(){
+  $("giftUser").innerHTML = allUsers
+    .slice().sort((a, b) => (a.username || "").localeCompare(b.username || ""))
+    .map(u => `<option value="${esc(u.uid)}">${esc(u.username || u.uid.slice(0,8))}</option>`).join("");
+
+  const mark = it => it.only ? " (nur hier)" : it.foreign ? " (Imposter)" : it.unlock ? " (Trophäe)" : "";
+  $("giftItem").innerHTML =
+    `<optgroup label="Symbole">` +
+    BADGES.map(b => `<option value="b:${b.id}">${b.icon} ${esc(b.label)}${mark(b)}</option>`).join("") +
+    `</optgroup><optgroup label="Rahmen">` +
+    FRAMES.map(f => `<option value="f:${f.id}">${esc(f.label)}${mark(f)}</option>`).join("") +
+    `</optgroup>`;
+}
+
+$("btnGiftItem").onclick = async () => {
+  const uid = $("giftUser").value, key = $("giftItem").value;
+  if (!uid || !key) return;
+  const btn = $("btnGiftItem"); btn.disabled = true;
+  try {
+    await updateDoc(userRef(uid), { owned: arrayUnion(key) });
+    userCache.delete(uid);
+    toast("Gegenstand verschenkt.");
+    await loadUsers();
+  } catch(e){ toast("Fehler: " + (e.code || e.message)); }
+  finally { btn.disabled = false; }
+};
+
+$("btnGiftGold").onclick = async () => {
+  const uid = $("giftUser").value;
+  const amount = parseInt($("giftGold").value, 10);
+  if (!uid || !Number.isFinite(amount) || amount === 0){ toast("Gib einen Betrag ein."); return; }
+  const btn = $("btnGiftGold"); btn.disabled = true;
+  try {
+    await updateDoc(userRef(uid), { gold: increment(amount), goldTotal: increment(Math.max(0, amount)) });
+    $("giftGold").value = "";
+    toast(`${amount} Gold gesendet.`);
+    await loadUsers();
+  } catch(e){ toast("Fehler: " + (e.code || e.message)); }
+  finally { btn.disabled = false; }
+};
+
+/* ---------- Spiele ---------- */
+async function loadGames(){
+  $("gameList").innerHTML = `<div class="empty">Wird geladen …</div>`;
+  try {
+    const snap = await getDocs(query(collection(db, GAMES), orderBy("createdAt", "desc"), limit(200)));
+    gameCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e){
+    $("gameList").innerHTML = `<div class="empty">Fehler: ${esc(e.code || e.message)}</div>`;
+    return;
+  }
+  renderGames();
+}
+$("btnGameReload").onclick = () => loadGames();
+
+const STATUS_TEXT = {
+  pending:"offen", active:"läuft", finished:"beendet",
+  declined:"abgelehnt", cancelled:"abgebrochen"
+};
+
+/* Aus den mitgeschriebenen Rundenpunkten den Endstand ablesen. */
+function gameTally(g){
+  const [a, b] = g.players || [];
+  let pa = 0, pb = 0, ra = 0, rb = 0, gespielt = 0;
+  for (let i = 0; i < ROUNDS; i++){
+    const s = g.scores?.["r" + i];
+    if (!s || s[a] == null || s[b] == null) continue;
+    gespielt++;
+    pa += s[a]; pb += s[b];
+    if (s[a] > s[b]) ra++; else if (s[b] > s[a]) rb++;
+  }
+  return { a, b, pa, pb, ra, rb, gespielt };
+}
+
+function renderGames(){
+  const term = $("gameSearch").value.trim().toLowerCase();
+  const rows = gameCache.filter(g => {
+    if (!term) return true;
+    return Object.values(g.names || {})
+      .some(n => (n.username || "").toLowerCase().includes(term));
+  });
+  $("gameCount").textContent = `${rows.length}${term ? " / " + gameCache.length : ""}`;
+
+  $("gameList").innerHTML = rows.length ? rows.map(g => {
+    const t = gameTally(g);
+    const na = g.names?.[t.a]?.username || "?";
+    const nb = g.names?.[t.b]?.username || "?";
+    const datum = dateDE(g.createdAt) || "—";
+    const farbe = t.ra > t.rb ? "var(--ok)" : t.rb > t.ra ? "var(--magenta)" : "var(--muted)";
+    return `<div class="gm">
+      <div class="grow">
+        <div class="who">${esc(na)} <span style="color:var(--muted)">gegen</span> ${esc(nb)}</div>
+        <div class="meta">${esc(datum)} · ${esc(STATUS_TEXT[g.status] || g.status)} · ${t.gespielt}/${ROUNDS} Runden · ${esc(configLabel(g.config))}</div>
+      </div>
+      <div class="sc" style="color:${farbe}">${t.ra}:${t.rb}</div>
+      <div class="meta" style="font-family:var(--mono);font-size:.64rem;color:var(--muted);flex:0 0 auto">${t.pa}:${t.pb}</div>
+    </div>`;
+  }).join("") : `<div class="empty">Nichts gefunden.</div>`;
+}
+$("gameSearch").addEventListener("input", renderGames);
+
+/* ---------- Fragenarchiv ---------- */
+async function loadArchive(){
+  $("archList").innerHTML = `<div class="empty">Wird geladen …</div>`;
+  try {
+    const snap = await getDocs(query(collection(db, ARCHIVE), orderBy("lastAt", "desc"), limit(500)));
+    archCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e){
+    $("archList").innerHTML = `<div class="empty">Fehler: ${esc(e.code || e.message)}</div>`;
+    return;
+  }
+  renderArchive();
+}
+$("btnArchReload").onclick = () => loadArchive();
+
+function renderArchive(){
+  const term = $("archSearch").value.trim().toLowerCase();
+  const rows = archCache.filter(r => {
+    if (!term) return true;
+    const alles = [r.q, r.category, ...(r.top || []), ...(r.decoys || [])].join(" ").toLowerCase();
+    return alles.includes(term);
+  });
+  $("archCount").textContent = `${rows.length}${term ? " / " + archCache.length : ""}`;
+
+  $("archList").innerHTML = rows.length ? rows.map(r => {
+    const wert = n => r.values?.[n] ? ` <span class="v">${esc(r.values[n])}</span>` : "";
+    const top = (r.top || []).map((n, i) => `<b>${i+1}.</b> ${esc(n)}${wert(n)}`).join(" · ");
+    const dec = (r.decoys || []).map(n => `${esc(n)}${wert(n)}`).join(" · ");
+    return `<div class="arch">
+      <div class="grow">
+        <div class="qq">${esc(r.q)}</div>
+        <div class="meta">${esc(r.category || "ohne Bereich")} · Stufe ${r.difficulty ?? 2} · ${r.uses ?? 0}× gespielt · ${r.source === "manual" ? "von Hand" : "API"}${r.unit ? " · " + esc(r.unit) : ""}</div>
+        <div class="sol">${top}</div>
+        <div class="dec">daneben: ${dec}</div>
+        ${r.note ? `<div class="dec">${esc(r.note)}</div>` : ""}
+      </div>
+      <button class="del" data-del="${esc(r.id)}" aria-label="Löschen">×</button>
+    </div>`;
+  }).join("") : `<div class="empty">Nichts gefunden.</div>`;
+
+  $("archList").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+    try {
+      await deleteDoc(doc(db, ARCHIVE, b.dataset.del));
+      archCache = archCache.filter(r => r.id !== b.dataset.del);
+      renderArchive();
+      toast("Frage gelöscht.");
+    } catch(e){ toast("Löschen fehlgeschlagen: " + (e.code || e.message)); }
+  });
+}
+$("archSearch").addEventListener("input", renderArchive);
+
+$("btnArchExport").onclick = () => {
+  const data = archCache.map(r => ({
+    q: r.q, unit: r.unit || "", top: r.top || [], decoys: r.decoys || [],
+    values: r.values || {}, note: r.note || "",
+    category: r.category ?? null, difficulty: r.difficulty ?? 2,
+    uses: r.uses ?? 0, source: r.source || "api"
+  }));
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `listduell-fragen-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast(`${data.length} Fragen exportiert.`);
+};
+
+$("btnArchImport").onclick = async () => {
+  const roh = $("archImport").value.trim();
+  if (!roh){ toast("Da steht nichts."); return; }
+  const btn = $("btnArchImport"); btn.disabled = true;
+  try {
+    let daten = JSON.parse(roh);
+    if (!Array.isArray(daten)) daten = [daten];
+
+    const gut = daten.filter(sane);
+    if (!gut.length) throw new Error("Kein Eintrag hat die Prüfung bestanden — je fünf Einträge in top und decoys, alle zehn verschieden.");
+
+    for (const r of gut){
+      const v = withValues(r);
+      const ref = doc(db, ARCHIVE, qKey(v.q));
+      await setDoc(ref, {
+        q: v.q, unit: v.unit, top: v.top, decoys: v.decoys,
+        values: v.values, note: v.note,
+        category: r.category ?? null,
+        difficulty: [1,2,3,4].includes(Number(r.difficulty)) ? Number(r.difficulty) : 2,
+        source: "manual",
+        lastAt: serverTimestamp(),
+        createdAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    $("archImport").value = "";
+    toast(`${gut.length} von ${daten.length} übernommen.`);
+    await loadArchive();
+  } catch(e){ toast("Fehler: " + (e.message || e.code)); }
+  finally { btn.disabled = false; }
+};
+
+/* ---------- Zahlen ---------- */
+function renderAdminStats(){
+  const heute = new Date().toLocaleDateString("sv-SE");
+  const aktiv = allUsers.filter(u => u.lastLogin === heute).length;
+  const woche = allUsers.filter(u => u.lastLogin && (Date.now() - new Date(u.lastLogin).getTime()) < 7*864e5).length;
+  const beendet = gameCache.filter(g => g.status === "finished").length;
+  const laufend = gameCache.filter(g => g.status === "active" || g.status === "pending").length;
+  const runden = gameCache.reduce((n, g) => n + gameTally(g).gespielt, 0);
+  const punkte = allUsers.reduce((n, u) => n + (listStats(u).points ?? 0), 0);
+  const voll   = allUsers.reduce((n, u) => n + (listStats(u).perfect ?? 0), 0);
+
+  $("admStats1").innerHTML =
+    statBox(allUsers.length, "Spieler") +
+    statBox(beendet, "Spiele beendet", "var(--yellow)") +
+    statBox(laufend, "gerade offen");
+
+  $("admStats2").innerHTML =
+    statBox(runden, "Runden gespielt") +
+    statBox(archCache.length, "Fragen im Archiv", "var(--ok)") +
+    statBox(voll, "volle Punktzahl");
+
+  $("admStats3").innerHTML =
+    statBox(aktiv, "heute aktiv") +
+    statBox(woche, "diese Woche") +
+    statBox(punkte, "Punkte gesamt");
+}
+
+/* ---------- Admins verwalten ---------- */
+async function renderAdminList(){
+  const eintraege = [];
+  const root = allUsers.find(isRootAdmin);
+  if (root) eintraege.push({ uid: root.uid, username: root.username, root: true });
+  else if (profile && isRootAdmin(profile)) eintraege.push({ uid: me.uid, username: profile.username, root: true });
+
+  for (const uid of adminUids){
+    if (eintraege.some(e => e.uid === uid)) continue;
+    const u = allUsers.find(x => x.uid === uid) || await getUser(uid);
+    eintraege.push({ uid, username: u?.username || uid.slice(0,8), root: false });
+  }
+
+  $("adminList").innerHTML = eintraege.map(e => `
+    <div class="row-item">
+      <div class="grow">
+        <div class="name">${esc(e.username)}${e.root ? `<span class="adminbadge">Gründer</span>` : ""}</div>
+      </div>
+      ${e.root ? "" : `<button class="btn sm ghost" data-unadmin="${esc(e.uid)}">Entziehen</button>`}
+    </div>`).join("") || `<div class="empty">Noch niemand ernannt.</div>`;
+
+  $("adminList").querySelectorAll("[data-unadmin]").forEach(b => b.onclick = async () => {
+    try {
+      await deleteDoc(doc(db, "admins", b.dataset.unadmin));
+      adminUids.delete(b.dataset.unadmin);
+      await renderAdminList();
+      renderUsers();
+      toast("Adminrechte entzogen.");
+    } catch(e){ toast("Fehler: " + (e.code || e.message)); }
+  });
+}
+
+$("btnAdminAdd").onclick = async () => {
+  const name = $("adminUser").value.trim().toLowerCase();
+  if (!name) return;
+  const btn = $("btnAdminAdd"); btn.disabled = true;
+  try {
+    const s = await getDoc(doc(db, "usernames", name));
+    if (!s.exists()){ toast("Diesen Benutzernamen gibt es nicht."); return; }
+    const uid = s.data().uid;
+    await setDoc(doc(db, "admins", uid), {
+      username: name, addedBy: profile.username, addedAt: serverTimestamp()
+    });
+    adminUids.add(uid);
+    $("adminUser").value = "";
+    toast("Adminrechte vergeben.");
+    await renderAdminList();
+    renderUsers();
+  } catch(e){ toast("Fehler: " + (e.code || e.message)); }
+  finally { btn.disabled = false; }
+};
 </script>
 </body>
 </html>
