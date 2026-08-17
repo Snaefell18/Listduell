@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Rangliste</title>
+<title>List Duell</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#10122B">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Rangliste">
+<meta name="apple-mobile-web-app-title" content="List Duell">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="icon" href="/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -440,10 +440,9 @@
 <body>
 <div id="splash">
   <div>
-    <div class="s-eyebrow">Fünf Plätze</div>
-    <div class="s-mask"><div class="s-word">Rangliste</div></div>
+    <div class="s-mask"><div class="s-word">List Duell</div></div>
     <div class="s-rule"></div>
-    <div class="s-sub">und nur eine richtige Reihenfolge</div>
+    <div class="s-sub">Fünf Runden, je eine Top-5-Liste</div>
   </div>
 </div>
 
@@ -467,8 +466,8 @@
         <rect x="21" y="80" width="16" height="4" rx="2" fill="#9AA0CC" opacity=".5"/>
         <rect x="83" y="90" width="16" height="4" rx="2" fill="#9AA0CC" opacity=".5"/>
       </svg>
-      <h1 class="wordmark">Rangliste</h1>
-      <p class="slogan">Fünf Plätze<br><b>und nur eine richtige Reihenfolge</b></p>
+      <h1 class="wordmark">List Duell</h1>
+      <p class="slogan">Fünf Runden, je eine Top-5-Liste</p>
     </div>
 
     <div class="stack">
@@ -1348,7 +1347,7 @@ const BADGES = [
   { id:"ufo",      icon:"🛸",  label:"Ufo",       price:250 },
   { id:"krone",    icon:"👑",  label:"Krone",     price:400 },
 
-  /* --- nur im Rangliste-Shop --- */
+  /* --- nur im List-Duell-Shop --- */
   { id:"klemmbrett", icon:"📋", label:"Klemmbrett", price:90,  only:true },
   { id:"wuerfel",    icon:"🎲", label:"Würfel",     price:90,  only:true },
   { id:"podest",     icon:"🏆", label:"Podest",     price:130, only:true },
@@ -1366,7 +1365,7 @@ const BADGES = [
   { id:"hirn",     icon:"🧠", label:"Hirn",     foreign:u => (u?.bonusHits ?? 0)    >= 10 },
   { id:"diamant",  icon:"💎", label:"Diamant",  foreign:u => (u?.goldTotal ?? 0)    >= 1000 },
 
-  /* Nur über Rangliste-Trophäen */
+  /* Nur über List-Duell-Trophäen */
   { id:"orakel",  icon:"🔮", label:"Orakel",  unlock:"lw25", only:true },
   { id:"hundert", icon:"💯", label:"Hundert", unlock:"lp1",  only:true }
 ];
@@ -1380,7 +1379,7 @@ const FRAMES = [
   { id:"ocean",  label:"Tiefsee",    price:550 },
   { id:"royal",  label:"Königlich",  price:1000 },
 
-  /* --- nur im Rangliste-Shop --- */
+  /* --- nur im List-Duell-Shop --- */
   { id:"bronze", label:"Bronze", price:200, only:true },
   { id:"silber", label:"Silber", price:340, only:true },
   { id:"platin", label:"Platin", price:700, only:true },
@@ -1393,7 +1392,7 @@ const FRAMES = [
   { id:"veteran",  label:"Veteran",  foreign:u => (u?.loginDays ?? 0)   >= 100 },
   { id:"psychic",  label:"Seher",    foreign:u => (u?.bonusHits ?? 0)   >= 50 },
 
-  /* Rangliste-Trophäen */
+  /* List-Duell-Trophäen */
   { id:"rangkrone",  label:"Ranghoheit", unlock:"lw100", only:true },
   { id:"perfektion", label:"Perfektion", unlock:"lp10",  only:true }
 ];
@@ -1669,7 +1668,7 @@ $("btnResetRecord").onclick = async () => {
    9) Installationshinweis
    ══════════════════════════════════════════════════════════════ */
 let installEvent = null;
-const INSTALL_KEY = "rang_install_hidden";
+const INSTALL_KEY = "listduell_install_hidden";
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvent = e; renderInstall(); });
 
 function renderInstall(){
@@ -1679,7 +1678,7 @@ function renderInstall(){
   if (standalone || localStorage.getItem(INSTALL_KEY) === "1"){ card.classList.add("hidden"); return; }
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
   if (installEvent){
-    $("installText").textContent = "Ein Tipp, und die Rangliste liegt wie eine App auf dem Bildschirm.";
+    $("installText").textContent = "Legt List Duell wie eine App auf den Startbildschirm.";
     $("installGo").classList.remove("hidden");
   } else if (ios){
     $("installText").innerHTML = `Im Safari-Menü <span class="share">Teilen</span> auf „Zum Home-Bildschirm“ tippen.`;
@@ -1714,13 +1713,13 @@ async function initPush(){
 function pushStatusText(){
   if (!("Notification" in window)) return "Dieser Browser kann keine Meldungen zeigen.";
   if (Notification.permission === "denied") return "In den Browsereinstellungen blockiert.";
-  const tok = localStorage.getItem("rang_push_token");
+  const tok = localStorage.getItem("listduell_push_token");
   if (Notification.permission === "granted" && tok) return "Dieses Gerät bekommt Meldungen.";
   return "Aus. Antippen zum Einschalten.";
 }
 function renderPushSwitch(){
   const b = $("btnPush");
-  const on = Notification.permission === "granted" && !!localStorage.getItem("rang_push_token");
+  const on = Notification.permission === "granted" && !!localStorage.getItem("listduell_push_token");
   b.classList.toggle("on", on);
   b.setAttribute("aria-checked", String(on));
   b.disabled = !("Notification" in window) || Notification.permission === "denied";
@@ -1736,22 +1735,22 @@ async function pushAnschalten(){
     const token = await getToken(m, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
     if (!token) throw new Error("kein Token");
     await updateDoc(userRef(me.uid), { pushTokens: arrayUnion(token) });
-    localStorage.setItem("rang_push_token", token);
+    localStorage.setItem("listduell_push_token", token);
     toast("Meldungen sind an.");
   } catch(e){ toast("Push fehlgeschlagen: " + (e.message || e)); }
   renderPushSwitch();
 }
 async function pushAusschalten(){
-  const tok = localStorage.getItem("rang_push_token");
+  const tok = localStorage.getItem("listduell_push_token");
   if (tok){
     try { await updateDoc(userRef(me.uid), { pushTokens: arrayRemove(tok) }); } catch(_){}
-    localStorage.removeItem("rang_push_token");
+    localStorage.removeItem("listduell_push_token");
   }
   toast("Meldungen sind aus.");
   renderPushSwitch();
 }
 $("btnPush").onclick = () => {
-  const on = Notification.permission === "granted" && !!localStorage.getItem("rang_push_token");
+  const on = Notification.permission === "granted" && !!localStorage.getItem("listduell_push_token");
   on ? pushAusschalten() : pushAnschalten();
 };
 function pushStatusPruefen(){ renderPushSwitch(); }
@@ -2143,7 +2142,7 @@ async function collectRecentQuestions(uidA, uidB){
 }
 
 async function rememberQuestions(gid, questions){
-  const key = "rang_q_" + gid;
+  const key = "listduell_q_" + gid;
   if (localStorage.getItem(key)) return;
   localStorage.setItem(key, "1");
   const have = (profile?.recentLists || []).filter(q => !questions.includes(q));
@@ -2472,8 +2471,10 @@ async function showFinal(gid){
     const key = rid(i);
     const a = g.answers?.[key] || {};
     const top = sols[i]?.top || [];
-    const mp = g.scores?.[key]?.[me.uid] ?? scoreOf(a[me.uid], top);
-    const op = g.scores?.[key]?.[opp]    ?? scoreOf(a[opp], top);
+    // Bewusst selbst gerechnet statt aus "scores" gelesen: die Zahlen
+    // dort stammen vom jeweils anderen Gerät und sind nur ein Protokoll.
+    const mp = scoreOf(a[me.uid], top);
+    const op = scoreOf(a[opp], top);
     myTotal += mp; oppTotal += op;
     if (mp > op) myRounds++; else if (op > mp) oppRounds++;
     if (mp === 50) perfect++;
@@ -2522,7 +2523,7 @@ async function showFinal(gid){
 }
 
 async function recordStats(gid, { outcome, myTotal, myRounds, perfect, oppId, gold }){
-  const key = "rang_rec_" + gid;
+  const key = "listduell_rec_" + gid;
   if (localStorage.getItem(key)) return;
   localStorage.setItem(key, "1");
 
