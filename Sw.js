@@ -1,11 +1,11 @@
-/* Rangliste — Service Worker
+/* List Duell — Service Worker
    1. Push entgegennehmen und nur dann als Systemmeldung zeigen,
       wenn kein Fenster der App gerade sichtbar ist.
    2. Beim Antippen die App öffnen bzw. nach vorne holen.
    Es wird bewusst nichts zwischengespeichert — die App soll immer
    die aktuelle Version vom Server laden. */
 
-const VERSION = "rangliste-sw-1";
+const VERSION = "listduell-sw-1";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
@@ -16,10 +16,10 @@ self.addEventListener("push", event => {
     const raw = event.data ? event.data.json() : {};
     payload = raw.data || raw;            // FCM verpackt Datenfelder in "data"
   } catch(_){
-    payload = { title: "Rangliste", body: event.data ? event.data.text() : "" };
+    payload = { title: "List Duell", body: event.data ? event.data.text() : "" };
   }
 
-  const title = payload.title || "Rangliste";
+  const title = payload.title || "List Duell";
   const body  = payload.body  || "";
   const tag   = payload.tag   || "rangliste";
   const url   = payload.url   || "/";
