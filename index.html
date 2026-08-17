@@ -45,7 +45,18 @@
     -webkit-font-smoothing:antialiased;
     min-height:100dvh;
   }
-  .wrap{max-width:520px;margin:0 auto;padding:22px 18px calc(34px + env(safe-area-inset-bottom))}
+  /* Als installierte App läuft die Seite unter Statusleiste und Notch
+     hindurch (viewport-fit=cover). Die erste Zeile ist der Rückfall für
+     Browser ohne env(), die zweite hält oben, unten und an den Seiten
+     den nötigen Abstand. */
+  .wrap{max-width:520px;margin:0 auto;padding:22px 18px 34px}
+  .wrap{
+    padding:
+      calc(22px + env(safe-area-inset-top))
+      calc(18px + env(safe-area-inset-right))
+      calc(34px + env(safe-area-inset-bottom))
+      calc(18px + env(safe-area-inset-left));
+  }
   .screen{display:none;animation:rise .35s cubic-bezier(.2,.8,.2,1)}
   .screen.on{display:block}
   @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -324,7 +335,8 @@
   @keyframes spin{to{transform:rotate(360deg)}}
 
   #toast{
-    position:fixed;left:50%;bottom:26px;transform:translate(-50%,140%);
+    position:fixed;left:50%;bottom:26px;bottom:calc(26px + env(safe-area-inset-bottom));
+    transform:translate(-50%,140%);
     background:var(--paper);color:var(--ink);padding:12px 18px;border-radius:999px;
     font-weight:700;font-size:.9rem;max-width:88vw;text-align:center;z-index:99;
     transition:transform .3s cubic-bezier(.2,.8,.2,1);box-shadow:0 12px 30px -12px rgba(0,0,0,.8)
@@ -404,7 +416,9 @@
   #splash{
     position:fixed;inset:0;z-index:200;display:grid;place-items:center;
     background:radial-gradient(120% 90% at 50% 40%, #262C5C 0%, #10122B 62%);
-    padding:24px;text-align:center;
+    padding:calc(24px + env(safe-area-inset-top)) 24px
+            calc(24px + env(safe-area-inset-bottom));
+    text-align:center;
     animation:splashOut 2.9s cubic-bezier(.6,.05,.2,1) forwards;
   }
   @keyframes splashOut{0%,82%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden;transform:scale(1.06)}}
