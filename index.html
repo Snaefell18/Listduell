@@ -11,7 +11,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="List Duell">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="icon" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
@@ -195,13 +197,22 @@
   .trophyline .ic{font-size:1.2rem}
 
   /* ---------- Spielbrett ---------- */
-  .rndbar{display:flex;gap:6px;margin-bottom:14px}
-  .rndbar i{
-    flex:1;height:6px;border-radius:999px;background:var(--ink-2);
-    border:1px solid var(--line);display:block
+  .rndbar{display:flex;gap:8px;margin-bottom:14px}
+  .rnd{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .rnd .dot{
+    width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+    border:2px solid var(--line);background:var(--ink-2);overflow:hidden;
+    color:var(--muted);font-family:var(--mono);font-size:.74rem;line-height:1
   }
-  .rndbar i.done{background:var(--muted);border-color:transparent}
-  .rndbar i.now{background:var(--yellow);border-color:transparent}
+  .rnd .dot img{width:100%;height:100%;object-fit:cover;display:block}
+  .rnd .line{width:100%;height:3px;border-radius:999px;background:var(--ink-2)}
+  .rnd.me   .dot{border-color:var(--ok)}       .rnd.me   .line{background:var(--ok)}
+  .rnd.opp  .dot{border-color:var(--magenta)}  .rnd.opp  .line{background:var(--magenta)}
+  .rnd.draw .dot{border-color:var(--muted);color:var(--paper);font-size:1rem}
+  .rnd.draw .line{background:var(--muted)}
+  .rnd.now  .dot{border-color:var(--yellow);color:var(--yellow)}
+  .rnd.now  .line{background:var(--yellow)}
+  .rnd.soon{opacity:.42}
 
   .duel{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 14px}
   .duel .vs{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--muted)}
@@ -251,6 +262,14 @@
     display:grid;place-items:center;margin-top:2px
   }
   .rev .sol{font-family:var(--display);font-weight:700;font-size:1.1rem;letter-spacing:-.01em}
+  .rev .wert{font-family:var(--mono);font-size:.74rem;color:var(--yellow);margin-top:2px}
+  .restrow{
+    display:flex;align-items:center;gap:10px;padding:9px 0;
+    border-top:1px solid var(--line);font-size:.92rem
+  }
+  .restrow:first-child{border-top:0}
+  .restrow .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#CFCEE4}
+  .restrow .wert{font-family:var(--mono);font-size:.74rem;color:var(--muted);flex:0 0 auto}
   .picks{display:flex;flex-direction:column;gap:4px;margin-top:6px}
   .pk{display:flex;align-items:center;gap:7px;font-size:.86rem;color:#CFCEE4}
   .pk .who{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);width:52px;flex:0 0 auto}
@@ -897,6 +916,11 @@
       <div id="revList" style="margin-top:6px"></div>
     </div>
 
+    <div class="card hidden" id="revRest">
+      <div class="eyebrow">Die übrigen Vorschläge</div>
+      <div id="revRestBox" style="margin-top:6px"></div>
+    </div>
+
     <p class="dim" id="revNote" style="font-size:.84rem;margin-top:12px"></p>
 
     <div class="stack">
@@ -1005,7 +1029,7 @@ import { getMessaging, getToken, isSupported } from "https://www.gstatic.com/fir
 import {
   getFirestore, initializeFirestore,
   doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  query, onSnapshot, runTransaction,
+  query, where, limit, onSnapshot, runTransaction,
   arrayUnion, arrayRemove, increment, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
@@ -2063,7 +2087,7 @@ async function acceptChallenge(gid, btn){
     $("btnCancelChallenge").classList.add("hidden");
 
     const avoid = await collectRecentQuestions(g.challenger, g.opponent);
-    const data  = await fetchRounds(avoid, g.config);
+    const data  = await buildRounds(avoid, g.config);
 
     // Öffentlicher Teil: Frage und zehn gemischte Vorschläge.
     const publicRounds = data.map(r => ({
@@ -2072,10 +2096,15 @@ async function acceptChallenge(gid, btn){
       options: shuffle([...r.top, ...r.decoys])
     }));
 
-    // Lösungen liegen getrennt und sind laut Regeln erst lesbar,
-    // wenn beide für die jeweilige Runde abgegeben haben.
+    // Lösung samt Zahlenwerten liegt getrennt und ist laut Regeln erst
+    // lesbar, wenn beide für die jeweilige Runde abgegeben haben — die
+    // Werte allein würden die Reihenfolge ja schon verraten.
     await Promise.all(data.map((r, i) =>
-      setDoc(doc(db, GAMES, gid, "secrets", "r" + i), { top: r.top, note: r.note || "" })
+      setDoc(doc(db, GAMES, gid, "secrets", "r" + i), {
+        top: r.top,
+        values: r.values || {},
+        note: r.note || ""
+      })
     ));
 
     await updateDoc(gameRefOf(gid), {
@@ -2106,88 +2135,204 @@ async function declineChallenge(gid){
 }
 
 /* ══════════════════════════════════════════════════════════════
-   13) Fragen: von der Anthropic-API, notfalls aus dem Vorrat
+   13) Fragen — drei Quellen in dieser Reihenfolge:
+       1. das Archiv in Firestore (kostet keinen API-Aufruf)
+       2. die Anthropic-API, wenn das Archiv zu wenig Passendes hat
+       3. der fest eingebaute Vorrat, wenn beides ausfällt
+       Jede Runde bringt zu allen zehn Vorschlägen den Zahlenwert mit,
+       der bei der Auflösung gezeigt wird.
    ══════════════════════════════════════════════════════════════ */
+const ARCHIVE = "lists";
+
 const FALLBACK_ROUNDS = [
   { q:"Die einwohnerreichsten Städte Deutschlands", unit:"Einwohner",
     top:["Berlin","Hamburg","München","Köln","Frankfurt am Main"],
-    decoys:["Stuttgart","Düsseldorf","Leipzig","Dortmund","Essen"] },
+    decoys:["Stuttgart","Düsseldorf","Leipzig","Dortmund","Essen"],
+    values:{ "Berlin":"3,88 Mio.","Hamburg":"1,90 Mio.","München":"1,51 Mio.","Köln":"1,08 Mio.",
+             "Frankfurt am Main":"773.000","Stuttgart":"633.000","Düsseldorf":"626.000",
+             "Leipzig":"616.000","Dortmund":"587.000","Essen":"583.000" } },
   { q:"Die bevölkerungsreichsten Länder der Erde", unit:"Einwohner",
     top:["Indien","China","USA","Indonesien","Pakistan"],
-    decoys:["Nigeria","Brasilien","Bangladesch","Russland","Mexiko"] },
+    decoys:["Nigeria","Brasilien","Bangladesch","Russland","Mexiko"],
+    values:{ "Indien":"1,43 Mrd.","China":"1,41 Mrd.","USA":"335 Mio.","Indonesien":"277 Mio.",
+             "Pakistan":"240 Mio.","Nigeria":"223 Mio.","Brasilien":"216 Mio.",
+             "Bangladesch":"173 Mio.","Russland":"144 Mio.","Mexiko":"128 Mio." } },
   { q:"Die höchsten Berge der Welt", unit:"Höhe über dem Meer",
     top:["Mount Everest","K2","Kangchendzönga","Lhotse","Makalu"],
-    decoys:["Cho Oyu","Dhaulagiri","Manaslu","Nanga Parbat","Annapurna"] },
-  { q:"Die Planeten, von der Sonne aus gezählt", unit:"Abstand zur Sonne",
+    decoys:["Cho Oyu","Dhaulagiri","Manaslu","Nanga Parbat","Annapurna"],
+    values:{ "Mount Everest":"8.849 m","K2":"8.611 m","Kangchendzönga":"8.586 m","Lhotse":"8.516 m",
+             "Makalu":"8.485 m","Cho Oyu":"8.188 m","Dhaulagiri":"8.167 m","Manaslu":"8.163 m",
+             "Nanga Parbat":"8.126 m","Annapurna":"8.091 m" } },
+  { q:"Die Planeten, von der Sonne aus gezählt", unit:"mittlerer Abstand zur Sonne",
     top:["Merkur","Venus","Erde","Mars","Jupiter"],
-    decoys:["Saturn","Uranus","Neptun","Ceres","Pluto"] },
+    decoys:["Saturn","Uranus","Neptun","Pluto","Eris"],
+    values:{ "Merkur":"58 Mio. km","Venus":"108 Mio. km","Erde":"150 Mio. km","Mars":"228 Mio. km",
+             "Jupiter":"778 Mio. km","Saturn":"1.434 Mio. km","Uranus":"2.871 Mio. km",
+             "Neptun":"4.495 Mio. km","Pluto":"5.906 Mio. km","Eris":"10.120 Mio. km" } },
   { q:"Die größten Planeten des Sonnensystems", unit:"Durchmesser",
     top:["Jupiter","Saturn","Uranus","Neptun","Erde"],
-    decoys:["Venus","Mars","Merkur","Pluto","Titan"] },
+    decoys:["Venus","Mars","Merkur","Pluto","Titan"],
+    values:{ "Jupiter":"139.820 km","Saturn":"116.460 km","Uranus":"50.724 km","Neptun":"49.244 km",
+             "Erde":"12.742 km","Venus":"12.104 km","Mars":"6.779 km","Titan":"5.150 km",
+             "Merkur":"4.879 km","Pluto":"2.377 km" } },
   { q:"Die einwohnerreichsten Bundesländer", unit:"Einwohner",
     top:["Nordrhein-Westfalen","Bayern","Baden-Württemberg","Niedersachsen","Hessen"],
-    decoys:["Rheinland-Pfalz","Sachsen","Berlin","Schleswig-Holstein","Brandenburg"] },
+    decoys:["Rheinland-Pfalz","Sachsen","Berlin","Schleswig-Holstein","Brandenburg"],
+    values:{ "Nordrhein-Westfalen":"18,1 Mio.","Bayern":"13,4 Mio.","Baden-Württemberg":"11,3 Mio.",
+             "Niedersachsen":"8,1 Mio.","Hessen":"6,4 Mio.","Rheinland-Pfalz":"4,2 Mio.",
+             "Sachsen":"4,1 Mio.","Berlin":"3,9 Mio.","Schleswig-Holstein":"2,95 Mio.",
+             "Brandenburg":"2,6 Mio." } },
   { q:"Die flächengrößten Bundesländer", unit:"Fläche",
     top:["Bayern","Niedersachsen","Baden-Württemberg","Nordrhein-Westfalen","Brandenburg"],
-    decoys:["Mecklenburg-Vorpommern","Hessen","Sachsen-Anhalt","Rheinland-Pfalz","Thüringen"] },
+    decoys:["Mecklenburg-Vorpommern","Hessen","Sachsen-Anhalt","Rheinland-Pfalz","Thüringen"],
+    values:{ "Bayern":"70.542 km²","Niedersachsen":"47.710 km²","Baden-Württemberg":"35.748 km²",
+             "Nordrhein-Westfalen":"34.112 km²","Brandenburg":"29.654 km²",
+             "Mecklenburg-Vorpommern":"23.295 km²","Hessen":"21.116 km²",
+             "Sachsen-Anhalt":"20.459 km²","Rheinland-Pfalz":"19.858 km²","Thüringen":"16.202 km²" } },
   { q:"Die Ozeane nach Fläche", unit:"Fläche",
     top:["Pazifik","Atlantik","Indischer Ozean","Südlicher Ozean","Arktischer Ozean"],
-    decoys:["Mittelmeer","Karibisches Meer","Nordsee","Ostsee","Rotes Meer"] },
+    decoys:["Mittelmeer","Karibisches Meer","Nordsee","Ostsee","Rotes Meer"],
+    values:{ "Pazifik":"165 Mio. km²","Atlantik":"106 Mio. km²","Indischer Ozean":"70 Mio. km²",
+             "Südlicher Ozean":"20 Mio. km²","Arktischer Ozean":"14 Mio. km²",
+             "Karibisches Meer":"2,75 Mio. km²","Mittelmeer":"2,5 Mio. km²",
+             "Rotes Meer":"438.000 km²","Nordsee":"575.000 km²","Ostsee":"377.000 km²" } },
   { q:"Die Kontinente nach Fläche", unit:"Fläche",
     top:["Asien","Afrika","Nordamerika","Südamerika","Antarktika"],
-    decoys:["Europa","Australien","Ozeanien","Grönland","Arabische Halbinsel"] },
+    decoys:["Europa","Australien","Ozeanien","Grönland","Arabische Halbinsel"],
+    values:{ "Asien":"44,6 Mio. km²","Afrika":"30,4 Mio. km²","Nordamerika":"24,7 Mio. km²",
+             "Südamerika":"17,8 Mio. km²","Antarktika":"14,2 Mio. km²","Europa":"10,2 Mio. km²",
+             "Ozeanien":"8,5 Mio. km²","Australien":"7,7 Mio. km²",
+             "Arabische Halbinsel":"3,2 Mio. km²","Grönland":"2,2 Mio. km²" } },
   { q:"Die größten Inseln der Erde", unit:"Fläche",
     top:["Grönland","Neuguinea","Borneo","Madagaskar","Baffininsel"],
-    decoys:["Sumatra","Honshū","Großbritannien","Island","Sizilien"] },
-  { q:"Die größten Seen Deutschlands", unit:"Fläche",
+    decoys:["Sumatra","Honshū","Großbritannien","Island","Sizilien"],
+    values:{ "Grönland":"2.166.000 km²","Neuguinea":"786.000 km²","Borneo":"743.000 km²",
+             "Madagaskar":"587.000 km²","Baffininsel":"507.000 km²","Sumatra":"473.000 km²",
+             "Honshū":"228.000 km²","Großbritannien":"209.000 km²","Island":"103.000 km²",
+             "Sizilien":"25.700 km²" } },
+  { q:"Die größten Seen Deutschlands", unit:"Fläche des deutschen Anteils",
     top:["Bodensee","Müritz","Chiemsee","Schweriner See","Starnberger See"],
-    decoys:["Ammersee","Plöner See","Steinhuder Meer","Walchensee","Tegernsee"] },
-  { q:"Die längsten Flüsse Deutschlands", unit:"Länge im Land",
+    decoys:["Ammersee","Plöner See","Steinhuder Meer","Walchensee","Tegernsee"],
+    values:{ "Bodensee":"305 km²","Müritz":"112 km²","Chiemsee":"79,9 km²","Schweriner See":"61,5 km²",
+             "Starnberger See":"56,4 km²","Ammersee":"46,6 km²","Plöner See":"30,0 km²",
+             "Steinhuder Meer":"29,1 km²","Walchensee":"16,4 km²","Tegernsee":"8,9 km²" } },
+  { q:"Die längsten Flüsse Deutschlands", unit:"Länge innerhalb Deutschlands",
     top:["Rhein","Elbe","Donau","Main","Weser"],
-    decoys:["Saale","Spree","Mosel","Havel","Neckar"] },
-  { q:"Die häufigsten Buchstaben der deutschen Sprache", unit:"Häufigkeit",
+    decoys:["Saale","Spree","Neckar","Havel","Mosel"],
+    values:{ "Rhein":"865 km","Elbe":"727 km","Donau":"647 km","Main":"527 km","Weser":"452 km",
+             "Saale":"413 km","Spree":"400 km","Neckar":"362 km","Havel":"334 km","Mosel":"242 km" } },
+  { q:"Die häufigsten Buchstaben der deutschen Sprache", unit:"Anteil an allen Buchstaben",
     top:["E","N","I","S","R"],
-    decoys:["A","T","D","H","U"] },
+    decoys:["A","T","D","H","U"],
+    values:{ "E":"17,4 %","N":"9,8 %","I":"7,6 %","S":"7,3 %","R":"7,0 %","A":"6,5 %",
+             "T":"6,2 %","D":"5,1 %","H":"4,8 %","U":"4,4 %" } },
   { q:"Die höchsten Gebäude der Welt", unit:"Höhe",
     top:["Burj Khalifa","Merdeka 118","Shanghai Tower","Abraj Al Bait","Ping An Finance Center"],
-    decoys:["Lotte World Tower","One World Trade Center","Taipei 101","Empire State Building","Eiffelturm"] }
+    decoys:["Lotte World Tower","One World Trade Center","Taipei 101","Empire State Building","Eiffelturm"],
+    values:{ "Burj Khalifa":"828 m","Merdeka 118":"679 m","Shanghai Tower":"632 m",
+             "Abraj Al Bait":"601 m","Ping An Finance Center":"599 m","Lotte World Tower":"555 m",
+             "One World Trade Center":"541 m","Taipei 101":"508 m","Empire State Building":"443 m",
+             "Eiffelturm":"330 m" } }
 ];
 
-const RECENT_LIMIT = 120;
+/* Wie viele zuletzt gespielte Fragen sich jeder Spieler merkt. Beim Start
+   werden die Listen beider Spieler zusammengeworfen und gesperrt — bei
+   fünf Runden pro Spiel reicht das für rund 40 Spiele ohne Wiederholung. */
+const RECENT_LIMIT = 200;
+
+/* Vergleichsschlüssel: Groß- und Kleinschreibung, Satzzeichen und
+   doppelte Leerzeichen sollen keine neue Frage aus einer alten machen. */
+function qKey(q){
+  return String(q || "")
+    .toLowerCase()
+    .replace(/[^a-zäöüß0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 400);
+}
 
 async function collectRecentQuestions(uidA, uidB){
   const out = new Set();
   for (const uid of [uidA, uidB]){
     try {
       const s = await getDoc(userRef(uid));
-      (s.exists() ? (s.data().recentLists || []) : []).forEach(q => out.add(q));
+      (s.exists() ? (s.data().recentLists || []) : []).slice(-RECENT_LIMIT).forEach(q => out.add(q));
     } catch(_){}
   }
-  return [...out].slice(-80);
+  return [...out];
 }
 
 async function rememberQuestions(gid, questions){
   const key = "listduell_q_" + gid;
   if (localStorage.getItem(key)) return;
   localStorage.setItem(key, "1");
-  const have = (profile?.recentLists || []).filter(q => !questions.includes(q));
-  try { await updateDoc(userRef(me.uid), { recentLists: [...have, ...questions].slice(-RECENT_LIMIT) }); } catch(_){}
+  const neu = new Set(questions.map(qKey));
+  const have = (profile?.recentLists || []).filter(q => !neu.has(qKey(q)));
+  try {
+    await updateDoc(userRef(me.uid), { recentLists: [...have, ...questions].slice(-RECENT_LIMIT) });
+  } catch(_){}
 }
 
-function fallbackRounds(){
-  return shuffle(FALLBACK_ROUNDS).slice(0, ROUNDS).map(r => ({
-    q: r.q, unit: r.unit, top: r.top.slice(), decoys: r.decoys.slice(), note: ""
-  }));
-}
-
+/* ---------- Prüfung ---------- */
 function sane(r){
-  return r && typeof r.q === "string" && r.q.trim()
-    && Array.isArray(r.top) && r.top.length === 5
-    && Array.isArray(r.decoys) && r.decoys.length === 5
-    && new Set([...r.top, ...r.decoys].map(x => String(x).toLowerCase().trim())).size === 10;
+  if (!r || typeof r.q !== "string" || !r.q.trim()) return false;
+  if (!Array.isArray(r.top) || r.top.length !== 5) return false;
+  if (!Array.isArray(r.decoys) || r.decoys.length !== 5) return false;
+  const alle = [...r.top, ...r.decoys].map(x => String(x).toLowerCase().trim());
+  if (alle.some(x => !x)) return false;
+  return new Set(alle).size === 10;
 }
 
-async function fetchRounds(avoid = [], config = null){
+/* Fehlt zu einem Vorschlag der Zahlenwert, bleibt das Feld leer —
+   die Runde ist deswegen nicht unbrauchbar. */
+function withValues(r){
+  const values = {};
+  for (const name of [...r.top, ...r.decoys]){
+    const v = r.values?.[name];
+    if (v != null && String(v).trim()) values[name] = String(v).trim();
+  }
+  return { q:r.q.trim(), unit:String(r.unit||"").trim(), top:r.top.slice(),
+           decoys:r.decoys.slice(), values, note:String(r.note||"").trim() };
+}
+
+/* ---------- Quelle 1: Archiv ---------- */
+async function roundsFromArchive(config, blocked, wanted){
+  if (wanted <= 0) return [];
+  const stufe = config?.difficulty ?? 2;
+  const wunsch = config?.category || null;
+  try {
+    const snap = await getDocs(query(
+      collection(db, ARCHIVE),
+      where("difficulty", "==", stufe),
+      limit(300)
+    ));
+    let kandidaten = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(r => !blocked.has(qKey(r.q)))
+      .filter(r => !wunsch || r.category === wunsch)
+      .filter(sane);
+
+    if (!kandidaten.length) return [];
+
+    // Wenig benutzte zuerst, damit sich das Archiv gleichmäßig abnutzt.
+    kandidaten.sort((a, b) => (a.uses ?? 0) - (b.uses ?? 0));
+    const gewaehlt = shuffle(kandidaten.slice(0, Math.max(wanted * 6, 30))).slice(0, wanted);
+
+    // Zählerstand nachtragen, aber das Spiel nie davon abhängig machen.
+    gewaehlt.forEach(r => {
+      setDoc(doc(db, ARCHIVE, r.id),
+        { uses: increment(1), lastAt: serverTimestamp() },
+        { merge: true }).catch(()=>{});
+    });
+
+    return gewaehlt.map(withValues);
+  } catch(_){
+    return [];
+  }
+}
+
+/* ---------- Quelle 2: Anthropic-API ---------- */
+async function roundsFromApi(avoid, config, wanted){
+  if (wanted <= 0) return [];
   try {
     const r = await fetch(LISTS_ENDPOINT, {
       method:"POST", headers:{"content-type":"application/json"},
@@ -2195,27 +2340,81 @@ async function fetchRounds(avoid = [], config = null){
         avoid,
         category: config?.category || null,
         difficulty: config?.difficulty ?? 2,
-        count: ROUNDS
+        count: wanted
       })
     });
     if (!r.ok) throw new Error("http " + r.status);
     const d = await r.json();
-    const clean = (d.rounds || [])
+    return (d.rounds || [])
       .map(x => ({
-        q: String(x.q || "").trim(),
-        unit: String(x.unit || "").trim(),
+        q: String(x.q || ""),
+        unit: String(x.unit || ""),
         top: (x.top || []).map(s => String(s).trim()),
         decoys: (x.decoys || []).map(s => String(s).trim()),
-        note: String(x.note || "").trim()
+        values: x.values || {},
+        note: String(x.note || "")
       }))
-      .filter(sane);
-    if (clean.length >= ROUNDS) return clean.slice(0, ROUNDS);
-    // Zu wenig Brauchbares: mit dem Vorrat auffüllen.
-    const fill = fallbackRounds().filter(f => !clean.some(c => c.q === f.q));
-    return [...clean, ...fill].slice(0, ROUNDS);
+      .filter(sane)
+      .map(withValues)
+      .slice(0, wanted);
   } catch(_){
-    return fallbackRounds();
+    return [];
   }
+}
+
+/* Neu erzeugte Runden wandern ins Archiv, damit sie beim nächsten Mal
+   ohne API-Aufruf zur Verfügung stehen. */
+function archiveRounds(rounds, config){
+  rounds.forEach(r => {
+    const ref = doc(db, ARCHIVE, qKey(r.q));
+    setDoc(ref, {
+      q: r.q,
+      unit: r.unit,
+      top: r.top,
+      decoys: r.decoys,
+      values: r.values,
+      note: r.note,
+      category: config?.category || null,
+      difficulty: config?.difficulty ?? 2,
+      source: "api",
+      uses: increment(1),
+      lastAt: serverTimestamp()
+    }, { merge: true })
+      .then(() => setDoc(ref, { createdAt: serverTimestamp() }, { merge: true }).catch(()=>{}))
+      .catch(()=>{});
+  });
+}
+
+/* ---------- Quelle 3: Vorrat ---------- */
+function fallbackRounds(blocked, wanted){
+  const frei = FALLBACK_ROUNDS.filter(r => !blocked.has(qKey(r.q)));
+  const pool = frei.length >= wanted ? frei : FALLBACK_ROUNDS;
+  return shuffle(pool).slice(0, wanted).map(withValues);
+}
+
+/* ---------- Zusammenstellen ---------- */
+async function buildRounds(avoid = [], config = null){
+  const blocked = new Set(avoid.map(qKey));
+
+  const ausArchiv = await roundsFromArchive(config, blocked, ROUNDS);
+  ausArchiv.forEach(r => blocked.add(qKey(r.q)));
+
+  let rounds = ausArchiv.slice(0, ROUNDS);
+
+  if (rounds.length < ROUNDS){
+    const neu = await roundsFromApi([...blocked].slice(-200), config, ROUNDS - rounds.length);
+    if (neu.length){
+      archiveRounds(neu, config);
+      neu.forEach(r => blocked.add(qKey(r.q)));
+      rounds = [...rounds, ...neu];
+    }
+  }
+
+  if (rounds.length < ROUNDS){
+    rounds = [...rounds, ...fallbackRounds(blocked, ROUNDS - rounds.length)];
+  }
+
+  return shuffle(rounds).slice(0, ROUNDS);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2342,9 +2541,62 @@ function renderDuelHead(){
   $("gOppBox").innerHTML = avaHTML(currentGame.names?.[opp]);
   $("gameConfig").innerHTML = `<span class="pill">${esc(configLabel(currentGame.config))}</span>`;
 }
+/* Wie eine Runde ausgegangen ist: "me", "opp", "draw" — oder null,
+   solange noch nicht beide abgegeben haben. Bevorzugt wird selbst
+   gerechnet; nur wenn die Lösung gerade nicht im Speicher liegt (etwa
+   nach einem Neuladen mitten im Spiel), greift der Eintrag aus "scores". */
+function roundOutcome(i){
+  const g = currentGame;
+  if (!g || !me) return null;
+  const key = rid(i);
+  const a = g.answers?.[key] || {};
+  const opp = oppUid();
+  if (!a[me.uid] || !a[opp]) return null;
+
+  const sol = solutionCache.get(currentGameId + ":" + key);
+  let mp, op;
+  if (sol){
+    mp = scoreOf(a[me.uid], sol.top);
+    op = scoreOf(a[opp], sol.top);
+  } else {
+    mp = g.scores?.[key]?.[me.uid];
+    op = g.scores?.[key]?.[opp];
+    if (mp == null || op == null) return null;
+  }
+  return mp > op ? "me" : op > mp ? "opp" : "draw";
+}
+
+/* Fünf Punkte über dem Spielfeld: entschiedene Runden zeigen das Bild
+   des Siegers, unentschiedene ein Kreuz, kommende ihre Nummer. */
 function barHTML(n, boxId){
-  $(boxId).innerHTML = Array.from({length: ROUNDS}, (_, i) =>
-    `<i class="${i < n ? "done" : i === n ? "now" : ""}"></i>`).join("");
+  const box = $(boxId);
+  if (!box || !currentGame) return;
+  const opp = oppUid();
+
+  box.innerHTML = Array.from({length: ROUNDS}, (_, i) => {
+    const res = roundOutcome(i);
+    let cls = "", inner = `<span>${i+1}</span>`, titel = `Runde ${i+1}`;
+
+    if (res === "me" || res === "opp"){
+      const uid  = res === "me" ? me.uid : opp;
+      const foto = currentGame.names?.[uid]?.photo || AVA_FALLBACK;
+      cls = res;
+      inner = `<img src="${esc(foto)}" alt="" />`;
+      titel = `Runde ${i+1}: ${res === "me" ? "du" : nameOf(opp)}`;
+    } else if (res === "draw"){
+      cls = "draw";
+      inner = `<span>×</span>`;
+      titel = `Runde ${i+1}: unentschieden`;
+    } else if (i === n){
+      cls = "now";
+      titel = `Runde ${i+1} — läuft`;
+    } else if (i > n){
+      cls = "soon";
+    }
+
+    return `<div class="rnd ${cls}" title="${esc(titel)}">`
+         + `<span class="dot">${inner}</span><i class="line"></i></div>`;
+  }).join("");
 }
 
 /* ---------- Runde spielen ---------- */
@@ -2430,10 +2682,12 @@ function renderReveal(n, sol, mine, theirs, iAmReady){
     const mp = pointsFor(mine[i], i, sol.top);
     const op = pointsFor(theirs[i], i, sol.top);
     const cls = p => p === 10 ? "p10" : p === 5 ? "p5" : "p0";
+    const wert = sol.values?.[t];
     return `<div class="rev">
       <div class="rk">${i+1}</div>
       <div class="grow">
         <div class="sol">${esc(t)}</div>
+        ${wert ? `<div class="wert">${esc(wert)}</div>` : ""}
         <div class="picks">
           <div class="pk"><span class="who">Du</span><span class="txt">${esc(mine[i] || "—")}</span><span class="p ${cls(mp)}">+${mp}</span></div>
           <div class="pk"><span class="who">${esc(nameOf(opp)).slice(0,7)}</span><span class="txt">${esc(theirs[i] || "—")}</span><span class="p ${cls(op)}">+${op}</span></div>
@@ -2441,6 +2695,18 @@ function renderReveal(n, sol, mine, theirs, iAmReady){
       </div>
     </div>`;
   }).join("");
+
+  // Die fünf Vorschläge, die nicht in die Top 5 gehörten — mit ihren
+  // Zahlen, damit man sieht, wie knapp es war.
+  const rest = (r.options || []).filter(o => !sol.top.some(t => norm(t) === norm(o)));
+  $("revRestBox").innerHTML = rest.length
+    ? rest.map(o => {
+        const wert = sol.values?.[o];
+        return `<div class="restrow"><span class="txt">${esc(o)}</span>`
+             + `<span class="wert">${esc(wert || "—")}</span></div>`;
+      }).join("")
+    : `<div class="empty">Keine.</div>`;
+  $("revRest").classList.toggle("hidden", !rest.length);
 
   $("revNote").textContent = sol.note || "";
 
