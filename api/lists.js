@@ -1,5 +1,5 @@
 // api/lists.js — Vercel Serverless Function
-// Liefert fünf Ranglisten-Runden: Frage, korrekte Top 5 und fünf Ablenker.
+// Liefert fünf Runden für List Duell: Frage, korrekte Top 5 und fünf Ablenker.
 // Der API-Key bleibt auf dem Server (Environment Variable ANTHROPIC_API_KEY).
 
 const THEMEN = [
@@ -112,7 +112,7 @@ export default async function handler(req, res) {
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        // Für die Richtigkeit der Ranglisten lohnt sich das stärkere Modell.
+        // Für die Richtigkeit der Listen lohnt sich das stärkere Modell.
         model: "claude-sonnet-4-6",
         max_tokens: 2500,
         temperature: 1,
