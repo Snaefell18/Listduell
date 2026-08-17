@@ -1003,14 +1003,25 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { getMessaging, getToken, isSupported } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging.js";
 import {
-  getFirestore, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+  getFirestore, initializeFirestore,
+  doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
   query, onSnapshot, runTransaction,
   arrayUnion, arrayRemove, increment, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db   = getFirestore(app);
+
+/* Safari und iOS lassen den dauerhaften Firestore-Datenstrom je nach
+   Netz und Version gern hängen — dann kommen Live-Aktualisierungen nie
+   an, während einzelne Abfragen noch funktionieren. Mit dieser Option
+   erkennt das SDK den Fall und schaltet auf Long Polling um. */
+let db;
+try {
+  db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+} catch(_){
+  db = getFirestore(app);
+}
 
 /* ══════════════════════════════════════════════════════════════
    2) Hilfsfunktionen
@@ -1171,10 +1182,11 @@ onAuthStateChanged(auth, async user => {
   me = user;
   if (!user){ show("screen-auth"); return; }
   show("screen-loading");
-  const snap = await getDocRetry(userRef(user.uid), 3);
+  // Auf dem Handy darf der erste Lesevorgang ruhig etwas dauern — wer hier
+  // zu früh aufgibt, landet fälschlich wieder im Onboarding.
+  const snap = await getDocRetry(userRef(user.uid), 8);
   if (snap && snap.data().username){
-    profile = snap.data();
-    startSession();
+    startSession(snap.data());
   } else {
     pendingPhoto = user.photoURL ? await urlToDataUrl(user.photoURL) : null;
     $("obAva").src = pendingPhoto || AVA_FALLBACK;
@@ -1273,8 +1285,7 @@ $("obSave").onclick = async () => {
       }, { merge: true });
     });
     const s = await getDocRetry(userRef(me.uid));
-    profile = s ? s.data() : null;
-    startSession();
+    startSession(s ? s.data() : null);
   } catch(e){
     toast(e.message === "taken" ? "Benutzername ist schon vergeben." : "Fehler: " + (e.code || e.message));
   } finally { btn.disabled = false; btn.textContent = "Profil anlegen"; }
@@ -1283,7 +1294,17 @@ $("obSave").onclick = async () => {
 /* ══════════════════════════════════════════════════════════════
    5) Session
    ══════════════════════════════════════════════════════════════ */
-function startSession(){
+function startSession(seed){
+  /* Das Profil wurde eben schon gelesen — sofort anzeigen, statt auf die
+     erste Rückmeldung des Listeners zu warten. Sonst stünde bei einer
+     zähen Verbindung minutenlang ein leerer Bildrahmen und ein Strich
+     statt des Namens da. */
+  if (seed){
+    profile = seed;
+    renderHome();
+    renderStats();
+    loadFriends();
+  }
   show("screen-home");
 
   unsubProfile = onSnapshot(userRef(me.uid), snap => {
@@ -1299,10 +1320,14 @@ function startSession(){
     if ($("screen-trophies").classList.contains("on")) renderTrophies();
     const gid = profile[ACTIVE];
     if (gid && gid !== currentGameId) watchGame(gid);
+  }, err => {
+    toast("Profil lädt nicht: " + (err.code || err.message));
   });
 
   unsubInvites = onSnapshot(collection(db,"users",me.uid,INVITES), snap => {
     renderInvites(snap.docs.map(d => ({ id:d.id, ...d.data() })));
+  }, err => {
+    toast("Einladungen laden nicht: " + (err.code || err.message));
   });
 }
 
@@ -2232,6 +2257,9 @@ function watchGame(gid){
       if (s === "cancelled"){ toast("Das Spiel wurde abgebrochen.");             await leaveGame(); return; }
       if (s === "active"){    await enterActive(gid);   return; }
       if (s === "finished"){  await showFinal(gid);     return; }
+    },
+    err => {
+      toast("Spiel lädt nicht: " + (err.code || err.message));
     }
   );
 }
