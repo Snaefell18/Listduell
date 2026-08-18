@@ -16,7 +16,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#10122B;
@@ -32,7 +32,7 @@
     --r:18px;
     --display:"Bricolage Grotesque", system-ui, sans-serif;
     --body:"DM Sans", system-ui, sans-serif;
-    --mono:"DM Mono", ui-monospace, monospace;
+    --mono:"DM Sans", system-ui, sans-serif;   /* früher Monospace — jetzt dieselbe klare Schrift */
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -67,7 +67,7 @@
   h1{font-size:2.55rem;font-weight:800}
   h2{font-size:1.5rem;font-weight:700}
   h3{font-size:1.05rem;font-weight:700}
-  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .eyebrow{font-family:var(--body);font-size:.74rem;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
   p{line-height:1.55;color:#CFCEE4;margin:.5rem 0}
   .dim{color:var(--muted);font-size:.9rem}
 
@@ -93,7 +93,7 @@
     background:var(--ink);color:var(--paper);font-family:var(--body);font-size:1rem
   }
   input[type=text]:focus{outline:2px solid var(--yellow);outline-offset:1px}
-  label{display:block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  label{display:block;font-family:var(--body);font-size:.74rem;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
   .row{display:flex;gap:10px;align-items:center}
   select{
     width:100%;padding:14px 44px 14px 15px;border-radius:13px;border:1px solid var(--line);
@@ -149,10 +149,10 @@
   .row-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
   .row-item:first-child{border-top:0}
   .row-item .name{font-weight:700;font-size:1rem}
-  .row-item .sub{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+  .row-item .sub{font-size:.79rem;color:var(--muted)}
   .grow{flex:1;min-width:0}
   .name,.sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .record{font-family:var(--mono);font-size:.8rem;letter-spacing:.02em}
+  .record{font-size:.84rem;font-weight:500;font-variant-numeric:tabular-nums}
   .record .w{color:var(--ok)}
   .record .d{color:var(--muted)}
   .record .l{color:var(--magenta)}
@@ -165,7 +165,7 @@
     border:1px solid rgba(255,201,60,.42);border-radius:var(--r);padding:18px;margin-top:18px
   }
   .goldbar .amt{font-family:var(--display);font-weight:800;font-size:2.2rem;color:var(--yellow);letter-spacing:-.02em}
-  .goldbar .lbl{font-family:var(--mono);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .goldbar .lbl{font-size:.78rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
   .shopgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
   .item{
     background:var(--ink);border:1px solid var(--line);border-radius:15px;
@@ -173,15 +173,15 @@
   }
   .item .prev{font-size:1.75rem;line-height:1;margin-bottom:7px}
   .item .nm{font-size:.78rem;font-weight:700;line-height:1.2;display:block}
-  .item .pr{font-family:var(--mono);font-size:.68rem;color:var(--yellow);margin-top:4px;display:block}
+  .item .pr{font-size:.74rem;font-weight:500;color:var(--yellow);margin-top:4px;display:block}
   .item.owned{opacity:.55}
   .item.owned .pr{color:var(--muted)}
   .item.poor .pr{color:var(--magenta)}
   .item.sel{border-color:var(--yellow);background:rgba(255,201,60,.14)}
   .item.exclusive{border-color:rgba(79,214,192,.5)}
   .item .only{
-    position:absolute;top:5px;right:5px;font-family:var(--mono);font-size:.5rem;
-    letter-spacing:.1em;text-transform:uppercase;color:var(--ok)
+    position:absolute;top:5px;right:5px;font-size:.54rem;font-weight:600;
+    letter-spacing:.06em;text-transform:uppercase;color:var(--ok)
   }
   .ring{width:44px;height:44px;border-radius:50%;margin:0 auto 7px;background:var(--ink-3)}
 
@@ -203,7 +203,7 @@
     background:var(--ink);color:var(--muted);display:grid;place-items:center;font-size:.85rem
   }
   .tro-pick.on{background:var(--yellow);border-color:var(--yellow);color:#2A1D00;font-weight:700}
-  .unlocknote{font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;color:var(--yellow);margin-top:4px}
+  .unlocknote{font-size:.72rem;letter-spacing:.02em;color:var(--yellow);margin-top:4px}
   .trophyline{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:.95rem}
   .trophyline .ic{font-size:1.2rem}
 
@@ -213,7 +213,7 @@
   .rnd .dot{
     width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
     border:2px solid var(--line);background:var(--ink-2);overflow:hidden;
-    color:var(--muted);font-family:var(--mono);font-size:.74rem;line-height:1
+    color:var(--muted);font-size:.8rem;font-weight:600;line-height:1
   }
   .rnd .dot img{width:100%;height:100%;object-fit:cover;display:block}
   .rnd .line{width:100%;height:3px;border-radius:999px;background:var(--ink-2)}
@@ -226,9 +226,9 @@
   .rnd.soon{opacity:.42}
 
   .duel{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 14px}
-  .duel .vs{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--muted)}
+  .duel .vs{font-size:.82rem;letter-spacing:.04em;color:var(--muted)}
   .configpill{display:flex;justify-content:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-  .pill{display:inline-block;font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;padding:5px 9px;border-radius:999px;background:var(--ink-3);color:var(--muted)}
+  .pill{display:inline-block;font-size:.72rem;font-weight:500;letter-spacing:.04em;padding:5px 10px;border-radius:999px;background:var(--ink-3);color:var(--muted)}
   .pill.live{background:rgba(79,214,192,.16);color:var(--ok)}
 
   .quest{
@@ -236,7 +236,7 @@
     border:1px solid var(--line);border-radius:var(--r);padding:18px;text-align:center
   }
   .quest .q{font-family:var(--display);font-weight:800;font-size:1.35rem;letter-spacing:-.02em;line-height:1.15}
-  .quest .u{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+  .quest .u{font-size:.8rem;color:var(--muted);margin-top:8px}
 
   .slots{margin-top:16px;display:flex;flex-direction:column;gap:8px}
   .slot{
@@ -273,19 +273,19 @@
     display:grid;place-items:center;margin-top:2px
   }
   .rev .sol{font-family:var(--display);font-weight:700;font-size:1.1rem;letter-spacing:-.01em}
-  .rev .wert{font-family:var(--mono);font-size:.74rem;color:var(--yellow);margin-top:2px}
+  .rev .wert{font-size:.86rem;font-weight:500;color:var(--paper);opacity:.8;margin-top:3px;font-variant-numeric:tabular-nums}
   .restrow{
     display:flex;align-items:center;gap:10px;padding:9px 0;
     border-top:1px solid var(--line);font-size:.92rem
   }
   .restrow:first-child{border-top:0}
   .restrow .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#CFCEE4}
-  .restrow .wert{font-family:var(--mono);font-size:.74rem;color:var(--muted);flex:0 0 auto}
+  .restrow .wert{font-size:.84rem;color:var(--paper);opacity:.6;flex:0 0 auto;font-variant-numeric:tabular-nums}
   .picks{display:flex;flex-direction:column;gap:4px;margin-top:6px}
   .pk{display:flex;align-items:center;gap:7px;font-size:.86rem;color:#CFCEE4}
-  .pk .who{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);width:52px;flex:0 0 auto}
+  .pk .who{font-size:.78rem;color:var(--muted);width:54px;flex:0 0 auto}
   .pk .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pk .p{font-family:var(--mono);font-size:.72rem;flex:0 0 auto}
+  .pk .p{font-size:.82rem;font-weight:700;flex:0 0 auto;font-variant-numeric:tabular-nums}
   .pk .p.p10{color:var(--ok)}
   .pk .p.p5{color:var(--yellow)}
   .pk .p.p0{color:var(--muted)}
@@ -302,13 +302,68 @@
   .seg button.on{background:var(--ink-3);color:var(--paper)}
 
   /* ---------- Abwechselnd ---------- */
-  .turnline{
-    margin-top:14px;padding:11px 14px;border-radius:13px;text-align:center;
-    border:1px solid var(--line);background:var(--ink-2);
-    font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
-    color:var(--muted)
+  /* Punktestand als zwei Kreise, dazwischen steht, wer am Zug ist. */
+  .scoreline{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px}
+  .pl{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .pl.right{flex-direction:row-reverse}
+  .pl .face{width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--ink-3);border:1px solid var(--line)}
+  .ringscore{
+    position:relative;width:54px;height:54px;border-radius:50%;
+    border:2px solid var(--line);background:var(--ink-2);
+    display:grid;place-items:center;
+    font-family:var(--display);font-weight:800;font-size:1.35rem;letter-spacing:-.02em;
+    transition:border-color .25s ease, color .25s ease
   }
-  .turnline.mine{border-color:var(--yellow);color:var(--yellow);background:rgba(255,201,60,.1)}
+  .pl.turn .ringscore{
+    border-color:var(--yellow);color:var(--yellow);
+    animation:ringPulse 1.9s ease-in-out infinite
+  }
+  @keyframes ringPulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(255,201,60,.30)}
+    50%    {box-shadow:0 0 0 7px rgba(255,201,60,0)}
+  }
+  .ringscore .add{
+    position:absolute;right:-4px;bottom:-3px;
+    font-size:.66rem;font-weight:600;padding:2px 6px;border-radius:999px;
+    background:var(--ink);border:1px solid var(--line);color:var(--muted)
+  }
+  .ringscore .add.on{color:var(--ok);border-color:rgba(79,214,192,.5)}
+  .ringscore.bump{animation:bump .5s cubic-bezier(.16,1.3,.3,1)}
+  @keyframes bump{0%{transform:scale(1)}42%{transform:scale(1.16)}100%{transform:scale(1)}}
+  .whoseturn{
+    flex:1;min-width:0;text-align:center;
+    font-size:.78rem;color:var(--muted);line-height:1.45
+  }
+  .whoseturn.mine{color:var(--yellow)}
+
+  /* Frage: eine Zeile statt einer großen Karte */
+  .qline{
+    background:var(--ink-2);border:1px solid var(--line);border-radius:14px;
+    padding:11px 14px;text-align:center
+  }
+  .qtext{font-family:var(--display);font-weight:700;font-size:1.06rem;line-height:1.22;letter-spacing:-.01em}
+  .qsub{font-size:.79rem;color:var(--muted);margin-top:5px}
+
+  /* Es wird eng: Hinweis in der letzten Runde */
+  .tension{
+    margin-top:10px;padding:9px 12px;border-radius:12px;text-align:center;
+    border:1px dashed rgba(255,201,60,.55);background:rgba(255,201,60,.09);
+    font-size:.84rem;font-weight:500;color:var(--yellow);line-height:1.5;
+    animation:matchPulse 2.4s ease-in-out infinite
+  }
+  .tension.done{
+    border-style:solid;border-color:rgba(79,214,192,.5);background:rgba(79,214,192,.1);
+    color:var(--ok);animation:none
+  }
+
+  /* Kompaktes Brett */
+  .slots.tight{margin-top:12px;gap:6px}
+  .slots.tight .slot{min-height:46px;padding:9px 12px;gap:10px}
+  .slots.tight .slot .rk{width:24px;height:24px;font-size:.88rem}
+  .slots.tight .slot .val{font-size:.95rem}
+  .opts.tight{margin-top:12px;gap:7px}
+  .opts.tight .chip{padding:8px 13px;font-size:.88rem}
+
   .slot.locked{
     border-style:solid;border-color:rgba(79,214,192,.4);background:rgba(79,214,192,.07);
     cursor:default
@@ -316,21 +371,54 @@
   .slot.locked .rk{background:var(--ok);color:#04302A}
   .slot.pick{border-color:var(--yellow);background:rgba(255,201,60,.14);border-style:solid}
   .slot .by{
-    font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
-    color:var(--muted);flex:0 0 auto
+    font-size:.76rem;color:var(--muted);flex:0 0 auto
   }
-  .slot .sv{font-family:var(--mono);font-size:.7rem;color:var(--yellow);flex:0 0 auto}
+  .slot .sv{font-size:.82rem;font-weight:500;color:var(--paper);opacity:.85;flex:0 0 auto;font-variant-numeric:tabular-nums}
+
+  /* Der Eintrag wandert von der gewählten auf die richtige Position */
+  .slot.slid{animation:slideHome .75s cubic-bezier(.34,1.12,.35,1) both}
+  @keyframes slideHome{
+    0%  {transform:translateY(var(--from));border-color:var(--yellow);background:rgba(255,201,60,.2)}
+    62% {border-color:var(--yellow);background:rgba(255,201,60,.16)}
+    100%{transform:translateY(0)}
+  }
+  /* Ein Kandidat, der gar nicht in die Liste gehört, verpufft */
+  .slot.ghost{
+    border-style:solid;border-color:rgba(242,85,127,.5);background:rgba(242,85,127,.12);
+    animation:ghostOut 1.3s ease-in forwards
+  }
+  .slot.ghost .val{text-decoration:line-through;color:var(--magenta)}
+  @keyframes ghostOut{
+    0%  {opacity:1;transform:none}
+    22% {opacity:1;transform:translateX(-4px)}
+    34% {transform:translateX(4px)}
+    46% {transform:translateX(0)}
+    100%{opacity:0;transform:scale(.96)}
+  }
   .chip.pick{border-color:var(--yellow);background:rgba(255,201,60,.16);color:var(--paper)}
-  .flash{
-    margin-top:14px;padding:13px 15px;border-radius:14px;text-align:center;
-    border:1px solid var(--line);background:var(--ink-2);font-size:.92rem;line-height:1.5;
+
+  /* Letzter Zug: eine Zeile statt einer Karte */
+  .lastmove{
+    display:flex;align-items:center;gap:10px;margin-top:12px;
+    padding:9px 12px;border-radius:12px;
+    border:1px solid var(--line);background:var(--ink-2);
+    font-size:.84rem;line-height:1.4;
     animation:flashIn .4s cubic-bezier(.16,1.2,.3,1) both
   }
-  .flash.good{border-color:rgba(79,214,192,.5);background:rgba(79,214,192,.1)}
-  .flash.half{border-color:rgba(255,201,60,.5);background:rgba(255,201,60,.1)}
-  .flash.zero{border-color:rgba(242,85,127,.45);background:rgba(242,85,127,.1)}
-  .flash b{font-family:var(--display);font-weight:800;font-size:1.2rem}
+  .lastmove .pt{
+    flex:0 0 auto;width:38px;height:38px;border-radius:50%;
+    display:grid;place-items:center;
+    font-family:var(--display);font-weight:800;font-size:.95rem;
+    background:var(--ink);border:2px solid var(--line);color:var(--muted)
+  }
+  .lastmove.good{border-color:rgba(79,214,192,.45);background:rgba(79,214,192,.09)}
+  .lastmove.good .pt{border-color:var(--ok);color:var(--ok)}
+  .lastmove.half{border-color:rgba(255,201,60,.45);background:rgba(255,201,60,.09)}
+  .lastmove.half .pt{border-color:var(--yellow);color:var(--yellow)}
+  .lastmove.zero{border-color:rgba(242,85,127,.4);background:rgba(242,85,127,.09)}
+  .lastmove.zero .pt{border-color:var(--magenta);color:var(--magenta)}
   @keyframes flashIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
   .mv{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
   .mv:first-child{border-top:0}
   .mv .rk{
@@ -339,15 +427,14 @@
     display:grid;place-items:center
   }
   .mv .nm{font-weight:700;font-size:.97rem}
-  .mv .sub{font-family:var(--mono);font-size:.64rem;color:var(--muted);margin-top:2px}
-  .mv .pts{font-family:var(--mono);font-size:.78rem;flex:0 0 auto}
+  .mv .sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+  .mv .pts{font-size:.86rem;font-weight:700;flex:0 0 auto;font-variant-numeric:tabular-nums}
 
   /* ---------- Auflösung Platz für Platz ---------- */
   .matchball{
     margin-top:14px;padding:12px 14px;border-radius:14px;text-align:center;
     border:1px dashed rgba(255,201,60,.55);background:rgba(255,201,60,.09);
-    font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
-    color:var(--yellow);line-height:1.6;
+    font-size:.88rem;font-weight:500;color:var(--yellow);line-height:1.55;
     animation:matchPulse 2.4s ease-in-out infinite
   }
   @keyframes matchPulse{
@@ -358,7 +445,7 @@
   .rev:not(.pending) .revhold{display:none}
   .revhold{
     display:flex;align-items:center;gap:8px;min-height:52px;
-    font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.1em
+    font-size:.82rem;color:var(--muted)
   }
   .revhold i{
     display:block;height:9px;border-radius:999px;background:var(--ink);
@@ -382,7 +469,7 @@
     padding:14px 10px;text-align:center
   }
   .duelscore .n{font-family:var(--display);font-weight:800;font-size:2rem;letter-spacing:-.02em}
-  .duelscore .l{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .duelscore .l{font-size:.76rem;color:var(--muted);margin-top:3px}
   .duelscore .win{border-color:rgba(79,214,192,.5);background:rgba(79,214,192,.1)}
   .duelscore .win .n{color:var(--ok)}
 
@@ -395,9 +482,9 @@
   .rtable{margin-top:14px}
   .rrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:.92rem}
   .rrow:first-child{border-top:0}
-  .rrow .n{font-family:var(--mono);font-size:.7rem;color:var(--muted);width:52px;flex:0 0 auto}
+  .rrow .n{font-size:.78rem;color:var(--muted);width:58px;flex:0 0 auto}
   .rrow .q{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#CFCEE4}
-  .rrow .s{font-family:var(--mono);font-size:.82rem;flex:0 0 auto}
+  .rrow .s{font-size:.88rem;font-weight:500;flex:0 0 auto;font-variant-numeric:tabular-nums}
   .rrow .s b{color:var(--paper)}
   .rrow.mewin .s b:first-child{color:var(--ok)}
   .rrow.oppwin .s b:last-child{color:var(--magenta)}
@@ -405,7 +492,7 @@
   .statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
   .stat{background:var(--ink);border:1px solid var(--line);border-radius:14px;padding:14px 10px;text-align:center}
   .stat .n{font-family:var(--display);font-weight:800;font-size:1.8rem;letter-spacing:-.02em}
-  .stat .l{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .stat .l{font-size:.75rem;color:var(--muted);margin-top:3px;line-height:1.3}
 
   .levels{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
   .level{
@@ -413,7 +500,7 @@
     padding:12px 6px;text-align:center;color:var(--paper);opacity:.62
   }
   .level .n{font-family:var(--display);font-weight:800;font-size:1.3rem;line-height:1}
-  .level .t{font-family:var(--mono);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;margin-top:5px;color:var(--muted)}
+  .level .t{font-size:.72rem;font-weight:500;margin-top:5px;color:var(--muted)}
   .level.on{opacity:1;border-color:var(--yellow);background:rgba(255,201,60,.14)}
   .level.on .t{color:var(--yellow)}
 
@@ -479,13 +566,15 @@
   /* ---------- Adminfenster ---------- */
   textarea{
     width:100%;padding:13px 14px;border-radius:13px;border:1px solid var(--line);
-    background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:.8rem;
+    background:var(--ink);color:var(--paper);font-size:.8rem;
+    /* Hier ist feste Zeichenbreite sinnvoll: es steht JSON drin. */
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
     line-height:1.5;resize:vertical
   }
   textarea:focus{outline:2px solid var(--yellow);outline-offset:1px}
   .adminbadge{
-    display:inline-block;font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;
-    text-transform:uppercase;padding:3px 7px;border-radius:999px;
+    display:inline-block;font-size:.66rem;font-weight:600;letter-spacing:.04em;
+    text-transform:uppercase;padding:3px 8px;border-radius:999px;
     background:rgba(255,201,60,.18);color:var(--yellow);margin-left:6px
   }
   .del{
@@ -495,10 +584,10 @@
   .arch{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
   .arch:first-child{border-top:0}
   .arch .qq{font-weight:700;font-size:.95rem;line-height:1.3}
-  .arch .meta{font-family:var(--mono);font-size:.64rem;color:var(--muted);margin-top:3px}
+  .arch .meta{font-size:.78rem;color:var(--muted);margin-top:3px}
   .arch .sol{font-size:.82rem;color:#CFCEE4;margin-top:6px;line-height:1.5}
   .arch .sol b{color:var(--paper);font-weight:700}
-  .arch .sol .v{font-family:var(--mono);font-size:.72rem;color:var(--yellow)}
+  .arch .sol .v{font-size:.82rem;color:var(--paper);opacity:.7}
   .arch .dec{font-size:.78rem;color:var(--muted);margin-top:4px;line-height:1.5}
   .genbar{
     height:6px;border-radius:999px;background:var(--ink);border:1px solid var(--line);
@@ -511,14 +600,14 @@
   .gm{display:flex;gap:10px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}
   .gm:first-child{border-top:0}
   .gm .who{font-weight:700;font-size:.93rem}
-  .gm .meta{font-family:var(--mono);font-size:.64rem;color:var(--muted);margin-top:2px}
+  .gm .meta{font-size:.78rem;color:var(--muted);margin-top:2px}
   .gm .sc{font-family:var(--display);font-weight:800;font-size:1.05rem;flex:0 0 auto}
 
   /* ---------- Login ---------- */
   .brand{text-align:center;padding-top:8vh}
   .logo{width:104px;height:104px;margin:0 auto;display:block;filter:drop-shadow(0 18px 34px rgba(0,0,0,.55))}
   .wordmark{font-family:var(--display);font-weight:800;font-size:clamp(2.7rem,13vw,3.9rem);letter-spacing:-.045em;line-height:1;margin-top:18px}
-  .slogan{font-family:var(--mono);font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-top:12px;line-height:1.9}
+  .slogan{font-size:1.02rem;color:var(--muted);margin-top:14px;line-height:1.6}
   .slogan b{color:var(--yellow);font-weight:400}
   .authbtn{
     display:flex;align-items:center;justify-content:center;gap:11px;width:100%;
@@ -528,7 +617,7 @@
   .auth-google{background:#fff;color:#1B1B1B}
   .auth-apple{background:#000;color:#fff}
   .auth-mail{background:transparent;color:var(--paper);border:1px solid var(--line)}
-  .authsep{display:flex;align-items:center;gap:12px;margin:20px 0 4px;font-family:var(--mono);font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  .authsep{display:flex;align-items:center;gap:12px;margin:20px 0 4px;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
   .authsep::before,.authsep::after{content:"";flex:1;height:1px;background:var(--line)}
   #mailPanel{margin-top:14px}
   #mailPanel input{margin-bottom:9px}
@@ -549,7 +638,7 @@
 
   /* „Zeit für ein" — kommt von oben herein */
   #splash .s-pre{
-    font-family:var(--mono);font-size:.78rem;letter-spacing:.34em;text-transform:uppercase;
+    font-size:.9rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;
     color:var(--muted);margin-bottom:10px;
     opacity:0;transform:translateY(-10px);
     animation:sPre .7s .1s cubic-bezier(.16,1,.3,1) forwards
@@ -640,7 +729,7 @@
   }
 
   .head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
-  .link{background:none;border:0;color:var(--muted);font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;padding:6px 0}
+  .link{background:none;border:0;color:var(--muted);font-family:var(--body);font-size:.86rem;font-weight:500;letter-spacing:.01em;padding:6px 0}
   .link:hover{color:var(--paper)}
   .empty{padding:18px 4px;text-align:center;color:var(--muted);font-size:.9rem}
   .hidden{display:none!important}
@@ -1234,32 +1323,24 @@
   <section id="screen-alt" class="screen">
     <div class="rndbar" id="altBar"></div>
 
-    <div class="duelscore" id="altScore"></div>
+    <div class="scoreline" id="altScore"></div>
 
-    <div class="configpill" id="altConfig"></div>
-
-    <div class="quest">
-      <div class="eyebrow" id="altLabel">Runde 1 von 3</div>
-      <div class="q" id="altQuestion" style="margin-top:9px">—</div>
-      <div class="u" id="altUnit"></div>
+    <div class="qline">
+      <div class="qtext" id="altQuestion">—</div>
+      <div class="qsub" id="altUnit"></div>
     </div>
 
-    <div class="turnline" id="altTurn">—</div>
+    <div class="tension hidden" id="altTension"></div>
 
-    <div class="slots" id="altBoard"></div>
+    <div class="slots tight" id="altBoard"></div>
 
-    <div class="card" style="margin-top:16px">
-      <div class="eyebrow">Kandidaten</div>
-      <div class="opts" id="altPool" style="margin-top:10px"></div>
-    </div>
+    <div class="opts tight" id="altPool"></div>
 
-    <div class="flash hidden" id="altFlash"></div>
+    <div class="lastmove hidden" id="altFlash"></div>
 
-    <div class="stack">
-      <button class="btn yellow" id="btnAltPlay" disabled>Setzen</button>
-      <p class="dim" id="altHint" style="text-align:center;font-size:.82rem;margin-top:10px"></p>
-      <button class="link" id="btnAltAbort" style="width:100%;margin-top:12px;color:var(--magenta)">Spiel abbrechen</button>
-    </div>
+    <button class="btn yellow" id="btnAltPlay" style="margin-top:14px" disabled>Setzen</button>
+    <p class="dim" id="altHint" style="text-align:center;font-size:.78rem;margin-top:8px"></p>
+    <button class="link" id="btnAltAbort" style="width:100%;margin-top:4px;color:var(--magenta)">Spiel abbrechen</button>
   </section>
 
   <!-- ABWECHSELND: RUNDE VORBEI -->
@@ -3531,6 +3612,7 @@ async function leaveGame(){
   clearRevealTimers();
   revealKey = null; revealCtx = null;
   altPickCand = null; altPickSlot = null; altRound = -1; altSolCache = null;
+  altSeen = 0; altGhost = null; clearTimeout(altGhostTimer);
   if (unsubGame){ unsubGame(); unsubGame = null; }
   currentGameId = currentGame = null;
   sideEffectGuard = new Set();
@@ -3661,7 +3743,7 @@ async function renderLeaderboard(){
   users.sort((a,b) => (listStats(b).points ?? 0) - (listStats(a).points ?? 0));
   $("leaderboard").innerHTML = users.map((u,i) => `
     <div class="row-item">
-      <span class="sub" style="width:22px;font-family:var(--mono);color:var(--muted)">${i+1}</span>
+      <span class="sub" style="width:22px;color:var(--muted)">${i+1}</span>
       ${avaHTML(u)}
       <div class="grow">
         <div class="name">${esc(u.username)}${u.uid===me.uid?" · du":""}</div>
@@ -3739,7 +3821,7 @@ function renderUsers(){
         <div class="name">${esc(u.username || "ohne Namen")}${admin ? `<span class="adminbadge">Admin</span>` : ""}</div>
         <div class="record"><span class="w">${st.wins ?? 0}</span><span class="sep">/</span><span class="d">${st.draws ?? 0}</span><span class="sep">/</span><span class="l">${st.losses ?? 0}</span>
           <span style="color:var(--muted)"> · ${u.gold ?? 0} Gold · ${st.points ?? 0} Punkte</span></div>
-        <div class="meta" style="font-family:var(--mono);font-size:.64rem;color:var(--muted);margin-top:2px">
+        <div class="meta" style="font-size:.78rem;color:var(--muted);margin-top:2px">
           ${st.games ?? 0} Spiele · ${st.roundWins ?? 0} Runden · ${st.perfect ?? 0}× voll · zuletzt ${esc(u.lastLogin || "—")}
         </div>
       </div>
@@ -3845,7 +3927,7 @@ function renderGames(){
         <div class="meta">${esc(datum)} · ${esc(STATUS_TEXT[g.status] || g.status)} · ${t.gespielt}/${t.anzahl} Runden · ${esc(configLabel(g.config))}</div>
       </div>
       <div class="sc" style="color:${farbe}">${t.ra}:${t.rb}</div>
-      <div class="meta" style="font-family:var(--mono);font-size:.64rem;color:var(--muted);flex:0 0 auto">${t.pa}:${t.pb}</div>
+      <div class="meta" style="font-size:.78rem;color:var(--muted);flex:0 0 auto">${t.pa}:${t.pb}</div>
     </div>`;
   }).join("") : `<div class="empty">Nichts gefunden.</div>`;
 }
@@ -4261,71 +4343,156 @@ async function enterActiveAlt(gid){
 }
 
 /* ---------- Spielbrett ---------- */
+/* Ein Zug wird nur einmal vorgeführt: altSeen merkt sich, wie viele
+   Züge schon gezeigt wurden. Beim Betreten einer Runde wird nichts
+   nachgespielt, sonst liefe nach jedem Neuladen die Animation erneut. */
+let altSeen = 0;
+let altGhost = null;
+let altGhostTimer = null;
+let altBump = false;
+
 function renderAlt(n, sol){
   const g = currentGame;
   const opp = oppUid();
   const dran = g.turn === me.uid;
+  const moves = movesOf(g, n);
 
-  if (altRound !== n){ altPickCand = null; altPickSlot = null; altRound = n; }
+  const neueRunde = altRound !== n;
+  if (neueRunde){
+    altPickCand = null; altPickSlot = null; altRound = n;
+    altSeen = moves.length;
+    altGhost = null;
+    clearTimeout(altGhostTimer);
+  }
+
+  // Neuer Zug? Dann vormerken, was zu zeigen ist.
+  let zeigen = null;
+  if (moves.length > altSeen){
+    const m = moves[moves.length - 1];
+    const ziel = sol.top.findIndex(t => norm(t) === norm(m.cand));
+    zeigen = { m, ziel };
+    altSeen = moves.length;
+    altBump = m.pts > 0;
+
+    if (ziel === -1){
+      // Gehört nicht in die Liste: kurz auf dem gewählten Platz zeigen,
+      // dann verpuffen lassen.
+      altGhost = { slot: m.slot, cand: m.cand };
+      clearTimeout(altGhostTimer);
+      altGhostTimer = setTimeout(() => {
+        altGhost = null;
+        if (currentGame && (currentGame.round ?? 0) === n) renderAlt(n, sol);
+      }, 1400);
+    }
+  }
 
   barHTML(n, "altBar");
-  $("altLabel").textContent = `Runde ${n+1} von ${roundCount()}`;
   $("altQuestion").textContent = g.rounds?.[n]?.q || "—";
-  $("altUnit").textContent = g.rounds?.[n]?.unit ? `sortiert nach: ${g.rounds[n].unit}` : "";
-  $("altConfig").innerHTML =
-    `<span class="pill">${esc(configLabel(g.config))}</span>`
-  + `<span class="pill live">Abwechselnd</span>`;
+  $("altUnit").textContent = g.rounds?.[n]?.unit
+    ? `Runde ${n+1}/${roundCount()} · nach ${g.rounds[n].unit}`
+    : `Runde ${n+1}/${roundCount()}`;
 
-  renderAltScore(n);
-
-  const t = $("altTurn");
-  t.classList.toggle("mine", dran);
-  t.textContent = dran ? "Du bist am Zug" : `${nameOf(opp)} ist am Zug`;
-
-  renderAltBoard(n, sol, dran);
+  renderAltScore(n, dran);
+  renderAltTension(n);
+  renderAltBoard(n, sol, dran, zeigen);
   renderAltPool(n, dran);
-  renderAltFlash(n, sol);
+  renderAltLastMove(n, sol);
 
   const bereit = dran && altPickCand && altPickSlot !== null;
   $("btnAltPlay").disabled = !bereit;
   $("btnAltPlay").textContent = dran ? "Setzen" : "Nicht am Zug";
-  $("altHint").textContent = !dran
-    ? "Warte, bis du wieder dran bist."
-    : altPickCand === null
-      ? "Wähle einen Kandidaten."
-      : altPickSlot === null
-        ? "Wähle jetzt einen freien Platz."
-        : "Zehn Punkte für den richtigen Platz, fünf für einen daneben.";
+  $("altHint").textContent = !dran ? ""
+    : altPickCand === null ? "Kandidat wählen"
+    : altPickSlot === null ? "Platz wählen"
+    : "Genau richtig 10 Punkte, einen daneben 5";
 
   show("screen-alt");
 }
 
-function renderAltScore(n){
+/* Zwei Kreise, dazwischen wer am Zug ist. */
+function renderAltScore(n, dran){
   const g = currentGame, opp = oppUid();
-  const mp = g.points?.[rid(n)]?.[me.uid] ?? 0;
-  const op = g.points?.[rid(n)]?.[opp] ?? 0;
-  // Gesamt über alle bisherigen Runden — hier zählt am Ende die Summe.
+  const rm = g.points?.[rid(n)]?.[me.uid] ?? 0;
+  const ro = g.points?.[rid(n)]?.[opp] ?? 0;
   let gm = 0, go = 0;
   for (let i = 0; i < roundCount(); i++){
     gm += g.points?.[rid(i)]?.[me.uid] ?? 0;
     go += g.points?.[rid(i)]?.[opp] ?? 0;
   }
+  const foto = uid => esc(g.names?.[uid]?.photo || AVA_FALLBACK);
+  const bump = altBump ? " bump" : "";
+  altBump = false;
+
   $("altScore").innerHTML =
-    `<div class="${gm > go ? "win":""}"><div class="n">${gm}</div><div class="l">Du · Runde ${mp}</div></div>
-     <div class="${go > gm ? "win":""}"><div class="n">${go}</div><div class="l">${esc(nameOf(opp))} · Runde ${op}</div></div>`;
+    `<div class="pl ${dran ? "turn" : ""}">
+       <img class="face" src="${foto(me.uid)}" alt="" />
+       <span class="ringscore${bump}">${gm}<span class="add ${rm ? "on" : ""}">+${rm}</span></span>
+     </div>
+     <div class="whoseturn ${dran ? "mine" : ""}">${dran ? "du bist dran" : nameOf(opp) + " ist dran"}</div>
+     <div class="pl right ${dran ? "" : "turn"}">
+       <img class="face" src="${foto(opp)}" alt="" />
+       <span class="ringscore${bump}">${go}<span class="add ${ro ? "on" : ""}">+${ro}</span></span>
+     </div>`;
 }
 
-function renderAltBoard(n, sol, dran){
+/* In der letzten Runde zeigen, ob es noch kippen kann. */
+function renderAltTension(n){
+  const g = currentGame, opp = oppUid();
+  const box = $("altTension");
+  if (n + 1 < roundCount()){ box.classList.add("hidden"); return; }
+
+  const frei = boardOf(g, n).filter(v => !v).length;
+  let gm = 0, go = 0;
+  for (let i = 0; i < roundCount(); i++){
+    gm += g.points?.[rid(i)]?.[me.uid] ?? 0;
+    go += g.points?.[rid(i)]?.[opp] ?? 0;
+  }
+  const diff = gm - go;
+  const offen = frei * 10;          // mehr ist rechnerisch nicht mehr drin
+
+  let text = null, entschieden = false;
+  if (Math.abs(diff) > offen){
+    entschieden = true;
+    text = diff > 0
+      ? "Der Sieg ist dir nicht mehr zu nehmen"
+      : `${nameOf(opp)} kann nicht mehr eingeholt werden`;
+  } else if (frei === 1){
+    text = diff === 0
+      ? "Gleichstand — dieser Zug entscheidet alles"
+      : diff > 0
+        ? `Letzter Platz — ${diff} Punkte Vorsprung zu verteidigen`
+        : `Letzter Platz — ${-diff} Punkte Rückstand aufzuholen`;
+  } else if (frei <= 3){
+    text = diff === 0
+      ? `Gleichstand bei ${frei} freien Plätzen`
+      : diff > 0
+        ? `${diff} Punkte vorn, ${frei} Plätze offen`
+        : `${-diff} Punkte zurück, ${frei} Plätze offen`;
+  }
+
+  if (!text){ box.classList.add("hidden"); return; }
+  box.className = "tension" + (entschieden ? " done" : "");
+  box.textContent = text;
+}
+
+function renderAltBoard(n, sol, dran, zeigen){
   const g = currentGame;
   const board = boardOf(g, n);
   const moves = movesOf(g, n);
 
   $("altBoard").innerHTML = board.map((v, i) => {
+    if (altGhost && altGhost.slot === i && !v){
+      return `<div class="slot ghost">
+        <span class="rk">${i+1}</span>
+        <span class="val">${esc(altGhost.cand)}</span>
+        <span class="by">gehört nicht rein</span>
+      </div>`;
+    }
     if (v){
       const zug = moves.find(m => m.cand === v);
       const wer = zug ? (zug.uid === me.uid ? "Du" : nameOf(oppUid()).slice(0,7)) : "";
       const wert = sol.values?.[v];
-      return `<div class="slot locked">
+      return `<div class="slot locked" data-lock="${i}">
         <span class="rk">${i+1}</span>
         <span class="val">${esc(v)}</span>
         ${wert ? `<span class="sv">${esc(wert)}</span>` : ""}
@@ -4338,6 +4505,18 @@ function renderAltBoard(n, sol, dran){
       <span class="empty-t">${gewaehlt ? "hierhin" : "frei"}</span>
     </button>`;
   }).join("");
+
+  // Wanderung: der Eintrag startet dort, wo er gesetzt wurde, und
+  // rutscht auf seinen richtigen Platz.
+  if (zeigen && zeigen.ziel !== -1 && zeigen.ziel !== zeigen.m.slot){
+    const ziel  = $("altBoard").querySelector(`[data-lock="${zeigen.ziel}"]`);
+    const start = $("altBoard").children[zeigen.m.slot];
+    if (ziel && start){
+      const weg = start.offsetTop - ziel.offsetTop;
+      ziel.style.setProperty("--from", weg + "px");
+      ziel.classList.add("slid");
+    }
+  }
 
   $("altBoard").querySelectorAll("[data-altslot]").forEach(b => b.onclick = () => {
     const i = Number(b.dataset.altslot);
@@ -4355,7 +4534,7 @@ function renderAltPool(n, dran){
 
   $("altPool").innerHTML = offen.map(o =>
     `<button class="chip ${altPickCand === o ? "pick" : ""}" data-altcand="${esc(o)}" ${dran ? "" : "disabled"}>${esc(o)}</button>`
-  ).join("") || `<div class="empty">Nichts mehr übrig.</div>`;
+  ).join("");
 
   $("altPool").querySelectorAll("[data-altcand]").forEach(b => b.onclick = () => {
     const c = b.dataset.altcand;
@@ -4364,28 +4543,25 @@ function renderAltPool(n, dran){
   });
 }
 
-/* Der letzte Zug als Rückmeldung — für beide Seiten sichtbar. */
-function renderAltFlash(n, sol){
+/* Der letzte Zug in einer Zeile. */
+function renderAltLastMove(n, sol){
   const moves = movesOf(currentGame, n);
   const f = $("altFlash");
   if (!moves.length){ f.classList.add("hidden"); return; }
 
   const m = moves[moves.length - 1];
-  const wer = m.uid === me.uid ? "Du hast" : `${nameOf(oppUid())} hat`;
+  const wer = m.uid === me.uid ? "Du" : nameOf(oppUid());
   const cls = m.pts === 10 ? "good" : m.pts === 5 ? "half" : "zero";
-  const richtig = sol.top.findIndex(t => norm(t) === norm(m.cand));
+  const ziel = sol.top.findIndex(t => norm(t) === norm(m.cand));
 
-  let satz;
-  if (richtig === -1){
-    satz = `${wer} <strong>${esc(m.cand)}</strong> gesetzt — gehört gar nicht in die Liste.`;
-  } else if (m.pts === 10){
-    satz = `${wer} <strong>${esc(m.cand)}</strong> genau auf Platz ${richtig + 1} gesetzt.`;
-  } else {
-    satz = `${wer} <strong>${esc(m.cand)}</strong> auf Platz ${m.slot + 1} gesetzt — richtig ist Platz ${richtig + 1}.`;
-  }
+  const satz = ziel === -1
+    ? `<strong>${esc(m.cand)}</strong> gehört nicht in die Liste.`
+    : m.pts === 10
+      ? `<strong>${esc(m.cand)}</strong> genau auf Platz ${ziel + 1}.`
+      : `<strong>${esc(m.cand)}</strong> auf Platz ${m.slot + 1} — richtig ist ${ziel + 1}.`;
 
-  f.className = "flash " + cls;
-  f.innerHTML = `<b>+${m.pts}</b> &nbsp; ${satz}`;
+  f.className = "lastmove " + cls;
+  f.innerHTML = `<span class="pt">+${m.pts}</span><span class="grow">${esc(wer)}: ${satz}</span>`;
 }
 
 /* ---------- Zug abgeben ---------- */
