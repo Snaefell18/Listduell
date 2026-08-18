@@ -290,6 +290,58 @@
   .pk .p.p5{color:var(--yellow)}
   .pk .p.p0{color:var(--muted)}
 
+  /* ---------- Moduswahl ---------- */
+  .seg{
+    display:flex;gap:5px;background:var(--ink);border:1px solid var(--line);
+    border-radius:14px;padding:4px;margin-bottom:10px
+  }
+  .seg button{
+    flex:1;padding:11px 8px;border-radius:10px;background:transparent;
+    color:var(--muted);font-weight:700;font-size:.92rem
+  }
+  .seg button.on{background:var(--ink-3);color:var(--paper)}
+
+  /* ---------- Abwechselnd ---------- */
+  .turnline{
+    margin-top:14px;padding:11px 14px;border-radius:13px;text-align:center;
+    border:1px solid var(--line);background:var(--ink-2);
+    font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted)
+  }
+  .turnline.mine{border-color:var(--yellow);color:var(--yellow);background:rgba(255,201,60,.1)}
+  .slot.locked{
+    border-style:solid;border-color:rgba(79,214,192,.4);background:rgba(79,214,192,.07);
+    cursor:default
+  }
+  .slot.locked .rk{background:var(--ok);color:#04302A}
+  .slot.pick{border-color:var(--yellow);background:rgba(255,201,60,.14);border-style:solid}
+  .slot .by{
+    font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);flex:0 0 auto
+  }
+  .slot .sv{font-family:var(--mono);font-size:.7rem;color:var(--yellow);flex:0 0 auto}
+  .chip.pick{border-color:var(--yellow);background:rgba(255,201,60,.16);color:var(--paper)}
+  .flash{
+    margin-top:14px;padding:13px 15px;border-radius:14px;text-align:center;
+    border:1px solid var(--line);background:var(--ink-2);font-size:.92rem;line-height:1.5;
+    animation:flashIn .4s cubic-bezier(.16,1.2,.3,1) both
+  }
+  .flash.good{border-color:rgba(79,214,192,.5);background:rgba(79,214,192,.1)}
+  .flash.half{border-color:rgba(255,201,60,.5);background:rgba(255,201,60,.1)}
+  .flash.zero{border-color:rgba(242,85,127,.45);background:rgba(242,85,127,.1)}
+  .flash b{font-family:var(--display);font-weight:800;font-size:1.2rem}
+  @keyframes flashIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  .mv{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+  .mv:first-child{border-top:0}
+  .mv .rk{
+    flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:var(--ink-3);
+    color:var(--paper);font-family:var(--display);font-weight:800;font-size:.92rem;
+    display:grid;place-items:center
+  }
+  .mv .nm{font-weight:700;font-size:.97rem}
+  .mv .sub{font-family:var(--mono);font-size:.64rem;color:var(--muted);margin-top:2px}
+  .mv .pts{font-family:var(--mono);font-size:.78rem;flex:0 0 auto}
+
   /* ---------- Auflösung Platz für Platz ---------- */
   .matchball{
     margin-top:14px;padding:12px 14px;border-radius:14px;text-align:center;
@@ -665,6 +717,12 @@
       <button class="x" id="installX" aria-label="Hinweis ausblenden">×</button>
     </div>
 
+    <div class="seg" id="modeSeg">
+      <button data-mode="klassik">Klassik</button>
+      <button data-mode="wechsel">Abwechselnd</button>
+    </div>
+    <p class="dim" id="modeHint" style="font-size:.83rem;margin:-4px 0 16px;text-align:center">—</p>
+
     <div id="resumeCard" class="card hidden" style="border-color:rgba(79,214,192,.45);background:rgba(79,214,192,.07)">
       <div class="eyebrow" style="color:var(--ok)">Laufendes Spiel</div>
       <p style="margin:8px 0 12px" id="resumeText">—</p>
@@ -1030,6 +1088,15 @@
     </div>
 
     <div class="card">
+      <label>Spielart</label>
+      <div class="seg" id="modeSeg2" style="margin-bottom:6px">
+        <button data-mode2="klassik">Klassik</button>
+        <button data-mode2="wechsel">Abwechselnd</button>
+      </div>
+      <p class="dim" id="modeHint2" style="font-size:.82rem;margin:8px 0 0">—</p>
+    </div>
+
+    <div class="card">
       <label for="catSelect">Themenbereich</label>
       <select id="catSelect"></select>
       <p class="dim" style="font-size:.82rem;margin-top:8px">Bei „Gemischt“ kommt jede Runde aus einem anderen Bereich.</p>
@@ -1100,6 +1167,63 @@
         <div id="waitOppList" style="margin-top:8px"></div>
       </div>
       <div class="stack"><button class="btn ghost" id="btnAbort2" style="color:var(--magenta)">Spiel abbrechen</button></div>
+    </div>
+  </section>
+
+  <!-- ABWECHSELND: SPIELBRETT -->
+  <section id="screen-alt" class="screen">
+    <div class="rndbar" id="altBar"></div>
+
+    <div class="duelscore" id="altScore"></div>
+
+    <div class="configpill" id="altConfig"></div>
+
+    <div class="quest">
+      <div class="eyebrow" id="altLabel">Runde 1 von 3</div>
+      <div class="q" id="altQuestion" style="margin-top:9px">—</div>
+      <div class="u" id="altUnit"></div>
+    </div>
+
+    <div class="turnline" id="altTurn">—</div>
+
+    <div class="slots" id="altBoard"></div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="eyebrow">Kandidaten</div>
+      <div class="opts" id="altPool" style="margin-top:10px"></div>
+    </div>
+
+    <div class="flash hidden" id="altFlash"></div>
+
+    <div class="stack">
+      <button class="btn yellow" id="btnAltPlay" disabled>Setzen</button>
+      <p class="dim" id="altHint" style="text-align:center;font-size:.82rem;margin-top:10px"></p>
+      <button class="link" id="btnAltAbort" style="width:100%;margin-top:12px;color:var(--magenta)">Spiel abbrechen</button>
+    </div>
+  </section>
+
+  <!-- ABWECHSELND: RUNDE VORBEI -->
+  <section id="screen-altdone" class="screen">
+    <div class="rndbar" id="altDoneBar"></div>
+    <div class="eyebrow" id="altDoneLabel">Runde 1 von 3</div>
+    <h2 id="altDoneQuestion" style="margin-top:9px">—</h2>
+
+    <div class="duelscore" id="altDoneScore"></div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="eyebrow">Wer was gesetzt hat</div>
+      <div id="altDoneList" style="margin-top:6px"></div>
+    </div>
+
+    <div class="card hidden" id="altDoneRest">
+      <div class="eyebrow">Nicht in der Liste</div>
+      <div id="altDoneRestBox" style="margin-top:6px"></div>
+    </div>
+
+    <p class="dim" id="altDoneNote" style="font-size:.84rem;margin-top:12px"></p>
+
+    <div class="stack">
+      <button class="btn yellow" id="btnAltNext">Weiter</button>
     </div>
   </section>
 
@@ -1221,7 +1345,14 @@ const LISTS_ENDPOINT = "/api/lists";
 const GAMES     = "listgames";                 // statt "games"
 const INVITES   = "listinvites";               // statt "invites"
 const ACTIVE    = "activeListGameId";          // statt "activeGameId"
-const ROUNDS    = 5;
+const MODES = {
+  klassik: { label:"Klassik",     rounds:5, kurz:"Klassik" },
+  wechsel: { label:"Abwechselnd", rounds:3, kurz:"Abwechselnd" }
+};
+const ROUNDS = 5;                                  // Klassik
+const roundsOf = m => MODES[m]?.rounds ?? ROUNDS;
+const modeOf   = g => (g?.mode === "wechsel" ? "wechsel" : "klassik");
+const roundCount = () => roundsOf(modeOf(currentGame));
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
@@ -1573,6 +1704,7 @@ async function countLoginDay(){
 
 function renderHome(){
   renderInstall();
+  renderModeSeg();
   $("homeAvaBox").innerHTML = avaHTML(meLook(), "xl");
   $("homeName").textContent = profile.username;
   $("optName").textContent = profile.username;
@@ -2110,7 +2242,7 @@ async function openFriend(uid){
   const st = listStats(u);
   $("frGames").textContent  = st.games ?? 0;
   $("frPoints").textContent = st.points ?? 0;
-  const rounds = (st.games ?? 0) * ROUNDS;
+  const rounds = st.rounds ?? ((st.games ?? 0) * ROUNDS);
   $("frAvg").textContent = rounds ? Math.round((st.points ?? 0) / rounds) : "—";
 
   const busy = !!profile[ACTIVE];
@@ -2197,6 +2329,17 @@ function openSetup(uid){
 }
 
 function renderSetup(){
+  $("modeSeg2").querySelectorAll("[data-mode2]").forEach(b => {
+    b.classList.toggle("on", b.dataset.mode2 === mode);
+    b.onclick = () => {
+      mode = b.dataset.mode2;
+      localStorage.setItem(MODE_KEY, mode);
+      renderModeSeg();
+      renderSetup();
+    };
+  });
+  $("modeHint2").textContent = MODE_HINT[mode];
+
   const sel = $("catSelect");
   sel.innerHTML = `<option value="">Gemischt</option>` +
     CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
@@ -2225,6 +2368,7 @@ function configLabel(cfg){
   const catTxt = cfg.category ? cfg.category : "Gemischt";
   return `${catTxt} · Stufe ${cfg.difficulty} ${lvl ? lvl.t : ""}`.trim();
 }
+function modeLabel(m){ return MODES[m]?.label || MODES.klassik.label; }
 
 async function challenge(oppUid, config = null){
   if (profile[ACTIVE]){ toast("Du bist schon in einem Spiel."); return; }
@@ -2243,19 +2387,25 @@ async function challenge(oppUid, config = null){
         [oppUid]:  { username: opp.username,     photo: opp.photo || "",     badge: opp.badge || "",     frame: opp.frame || "" }
       },
       status: "pending",
+      mode,
       config: config || { category: null, difficulty: 2 },
       round: 0,
       rounds: [],
       answers: {},
       scores: {},
       ready: {},
+      board: {},
+      used: {},
+      points: {},
+      moves: {},
+      turn: me.uid,
       createdAt: serverTimestamp()
     });
     await setDoc(doc(db,"users",oppUid,INVITES,ref.id), {
       gameId: ref.id, from: me.uid,
       fromName: profile.username, fromPhoto: profile.photo || "",
       fromBadge: profile.badge || "", fromFrame: profile.frame || "",
-      configLabel: configLabel(config),
+      configLabel: `${modeLabel(mode)} · ${configLabel(config)}`,
       createdAt: serverTimestamp()
     });
     await updateDoc(userRef(me.uid), { [ACTIVE]: ref.id });
@@ -2297,8 +2447,9 @@ async function acceptChallenge(gid, btn){
     push(g.challenger, "listaccepted");
     watchGame(gid);
 
-    const avoid = await collectRecentQuestions(g.challenger, g.opponent);
-    const data  = await buildRounds(avoid, g.config);
+    const anzahl = roundsOf(modeOf(g));
+    const avoid  = await collectRecentQuestions(g.challenger, g.opponent);
+    const data   = await buildRounds(avoid, g.config, anzahl);
 
     // Öffentlicher Teil: Frage und zehn gemischte Vorschläge.
     const publicRounds = data.map(r => ({
@@ -2323,6 +2474,7 @@ async function acceptChallenge(gid, btn){
       status: "active",
       rounds: publicRounds,
       round: 0,
+      turn: starterOf(g, 0),
       startedAt: serverTimestamp()
     });
     await batch.commit();
@@ -2609,16 +2761,16 @@ function fallbackRounds(blocked, wanted){
 }
 
 /* ---------- Zusammenstellen ---------- */
-async function buildRounds(avoid = [], config = null){
+async function buildRounds(avoid = [], config = null, anzahl = ROUNDS){
   const blocked = new Set(avoid.map(qKey));
 
-  const ausArchiv = await roundsFromArchive(config, blocked, ROUNDS);
+  const ausArchiv = await roundsFromArchive(config, blocked, anzahl);
   ausArchiv.forEach(r => blocked.add(qKey(r.q)));
 
-  let rounds = ausArchiv.slice(0, ROUNDS);
+  let rounds = ausArchiv.slice(0, anzahl);
 
-  if (rounds.length < ROUNDS){
-    const neu = await roundsFromApi([...blocked].slice(-200), config, ROUNDS - rounds.length);
+  if (rounds.length < anzahl){
+    const neu = await roundsFromApi([...blocked].slice(-200), config, anzahl - rounds.length);
     if (neu.length){
       archiveRounds(neu, config);
       neu.forEach(r => blocked.add(qKey(r.q)));
@@ -2626,11 +2778,11 @@ async function buildRounds(avoid = [], config = null){
     }
   }
 
-  if (rounds.length < ROUNDS){
-    rounds = [...rounds, ...fallbackRounds(blocked, ROUNDS - rounds.length)];
+  if (rounds.length < anzahl){
+    rounds = [...rounds, ...fallbackRounds(blocked, anzahl - rounds.length)];
   }
 
-  return shuffle(rounds).slice(0, ROUNDS);
+  return shuffle(rounds).slice(0, anzahl);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2712,6 +2864,7 @@ window.addEventListener("focus", refreshGame);
 
 async function enterActive(gid){
   const g = currentGame;
+  if (modeOf(g) === "wechsel"){ await enterActiveAlt(gid); return; }
   const n = g.round ?? 0;
   const key = rid(n);
   const opp = oppUid();
@@ -2759,7 +2912,7 @@ async function enterActive(gid){
 
   if (ready[me.uid] && ready[opp] && once("adv:" + gid + ":" + n)){
     try {
-      if (n + 1 < ROUNDS){
+      if (n + 1 < roundCount()){
         await updateDoc(gameRefOf(gid), { round: n + 1 });
       } else {
         await updateDoc(gameRefOf(gid), { status: "finished", finishedAt: serverTimestamp() });
@@ -2822,8 +2975,17 @@ function roundOutcome(i){
   const g = currentGame;
   if (!g || !me) return null;
   const key = rid(i);
-  const a = g.answers?.[key] || {};
   const opp = oppUid();
+
+  if (modeOf(g) === "wechsel"){
+    // Eine Runde ist erst vorbei, wenn alle fünf Plätze belegt sind.
+    if (!boardVoll(g, i)) return null;
+    const mp = g.points?.[key]?.[me.uid] ?? 0;
+    const op = g.points?.[key]?.[opp] ?? 0;
+    return mp > op ? "me" : op > mp ? "opp" : "draw";
+  }
+
+  const a = g.answers?.[key] || {};
   if (!a[me.uid] || !a[opp]) return null;
 
   const sol = solutionCache.get(currentGameId + ":" + key);
@@ -2846,7 +3008,8 @@ function barHTML(n, boxId){
   if (!box || !currentGame) return;
   const opp = oppUid();
 
-  box.innerHTML = Array.from({length: ROUNDS}, (_, i) => {
+  const anzahl = roundCount();
+  box.innerHTML = Array.from({length: anzahl}, (_, i) => {
     const res = roundOutcome(i);
     let cls = "", inner = `<span>${i+1}</span>`, titel = `Runde ${i+1}`;
 
@@ -2882,7 +3045,7 @@ function renderRound(n){
   if (draftRound !== n){ draft = Array(5).fill(null); draftRound = n; }
 
   barHTML(n, "rndBar");
-  $("roundLabel").textContent = `Runde ${n+1} von ${ROUNDS}`;
+  $("roundLabel").textContent = `Runde ${n+1} von ${roundCount()}`;
   $("roundQuestion").textContent = r.q;
   $("roundUnit").textContent = r.unit ? `sortiert nach: ${r.unit}` : "";
 
@@ -2973,7 +3136,7 @@ function renderReveal(n, sol, mine, theirs, iAmReady){
                   step: 0, done: !matchball };
 
     barHTML(n, "revBar");
-    $("revLabel").textContent = `Runde ${n+1} von ${ROUNDS}`;
+    $("revLabel").textContent = `Runde ${n+1} von ${roundCount()}`;
     $("revQuestion").textContent = r.q;
 
     const ban = $("revMatch");
@@ -3137,7 +3300,7 @@ function updateNextButton(iAmReady){
     b.textContent = "Die Auflösung läuft …";
     return;
   }
-  const last = n + 1 >= ROUNDS;
+  const last = n + 1 >= roundCount();
   if (iAmReady){
     b.disabled = true;
     b.textContent = `Warte auf ${nameOf(opp)} …`;
@@ -3182,31 +3345,50 @@ async function showFinal(gid){
   // Alle fünf Lösungen einsammeln — nach Spielende sind sie freigegeben.
   // Nebeneinander statt nacheinander: fünf Netzwege werden zu einem.
   const sols = await Promise.all(
-    Array.from({length: ROUNDS}, (_, i) => loadSolution(gid, i))
+    Array.from({length: roundCount()}, (_, i) => loadSolution(gid, i))
   );
 
+  const modus = modeOf(g);
+  const anzahl = roundCount();
   const rows = [];
   let myTotal = 0, oppTotal = 0, myRounds = 0, oppRounds = 0, perfect = 0;
 
-  for (let i = 0; i < ROUNDS; i++){
+  for (let i = 0; i < anzahl; i++){
     const key = rid(i);
-    const a = g.answers?.[key] || {};
-    const top = sols[i]?.top || [];
-    // Bewusst selbst gerechnet statt aus "scores" gelesen: die Zahlen
-    // dort stammen vom jeweils anderen Gerät und sind nur ein Protokoll.
-    const mp = scoreOf(a[me.uid], top);
-    const op = scoreOf(a[opp], top);
+    let mp, op;
+
+    if (modus === "wechsel"){
+      // Hier stehen die Punkte laufend im Spieldokument — jeder Zug
+      // wird sofort gutgeschrieben.
+      mp = g.points?.[key]?.[me.uid] ?? 0;
+      op = g.points?.[key]?.[opp]    ?? 0;
+    } else {
+      const a2 = g.answers?.[key] || {};
+      const top = sols[i]?.top || [];
+      // Bewusst selbst gerechnet statt aus "scores" gelesen: die Zahlen
+      // dort stammen vom jeweils anderen Gerät und sind nur ein Protokoll.
+      mp = scoreOf(a2[me.uid], top);
+      op = scoreOf(a2[opp], top);
+      if (mp === 50) perfect++;
+    }
+
     myTotal += mp; oppTotal += op;
     if (mp > op) myRounds++; else if (op > mp) oppRounds++;
-    if (mp === 50) perfect++;
     rows.push({ q: g.rounds?.[i]?.q || `Runde ${i+1}`, mp, op });
   }
 
+  // Klassik: Runden zählen, Punkte entscheiden nur bei Gleichstand.
+  // Abwechselnd: allein die Gesamtpunkte zählen.
   let outcome = "draw";
-  if (myRounds > oppRounds) outcome = "win";
-  else if (oppRounds > myRounds) outcome = "lose";
-  else if (myTotal > oppTotal) outcome = "win";
-  else if (oppTotal > myTotal) outcome = "lose";
+  if (modus === "wechsel"){
+    if (myTotal > oppTotal) outcome = "win";
+    else if (oppTotal > myTotal) outcome = "lose";
+  } else {
+    if (myRounds > oppRounds) outcome = "win";
+    else if (oppRounds > myRounds) outcome = "lose";
+    else if (myTotal > oppTotal) outcome = "win";
+    else if (oppTotal > myTotal) outcome = "lose";
+  }
 
   const goldGained = myRounds * 4 + perfect * 5 + (outcome === "win" ? 12 : outcome === "draw" ? 6 : 0);
 
@@ -3215,15 +3397,21 @@ async function showFinal(gid){
   const v = $("finalVerdict");
   v.classList.remove("win","lose","draw");
   v.classList.add(outcome);
-  $("finalEyebrow").textContent = `${myRounds} : ${oppRounds} Runden`;
+  $("finalEyebrow").textContent = modus === "wechsel"
+    ? `${myTotal} : ${oppTotal} Punkte`
+    : `${myRounds} : ${oppRounds} Runden`;
   $("finalBig").textContent =
     outcome === "win" ? "Gewonnen!" : outcome === "lose" ? "Verloren." : "Unentschieden.";
 
-  const tiebreak = myRounds === oppRounds
-    ? (myTotal === oppTotal ? " Auch bei den Punkten steht es gleich." : ` Die Gesamtpunkte haben entschieden: ${myTotal} zu ${oppTotal}.`)
-    : "";
+  const nachsatz = modus === "wechsel"
+    ? (myRounds || oppRounds ? ` Runden: ${myRounds} zu ${oppRounds}.` : "")
+    : (myRounds === oppRounds
+        ? (myTotal === oppTotal
+            ? " Auch bei den Punkten steht es gleich."
+            : ` Die Gesamtpunkte haben entschieden: ${myTotal} zu ${oppTotal}.`)
+        : "");
   $("finalText").textContent =
-    `${myTotal} Punkte für dich, ${oppTotal} für ${nameOf(opp)}.${tiebreak}` +
+    `${myTotal} Punkte für dich, ${oppTotal} für ${nameOf(opp)}.${nachsatz}` +
     (goldGained ? ` +${goldGained} Gold.` : "");
 
   $("finalScore").innerHTML =
@@ -3253,6 +3441,7 @@ async function recordStats(gid, { outcome, myTotal, myRounds, perfect, oppId, go
 
   const patch = {
     "list.games":     increment(1),
+    "list.rounds":    increment(roundCount()),
     "list.points":    increment(myTotal),
     "list.roundWins": increment(myRounds),
     "list.perfect":   increment(perfect),
@@ -3281,6 +3470,7 @@ $("btnRematch").onclick = async () => {
 async function leaveGame(){
   clearRevealTimers();
   revealKey = null; revealCtx = null;
+  altPickCand = null; altPickSlot = null; altRound = -1; altSolCache = null;
   if (unsubGame){ unsubGame(); unsubGame = null; }
   currentGameId = currentGame = null;
   sideEffectGuard = new Set();
@@ -3399,7 +3589,7 @@ function renderStats(){
   $("stPerfect").textContent = s.perfect ?? 0;
   $("stBest").textContent    = s.bestStreak ?? 0;
   $("stTrophy").innerHTML = trophyLineHTML(profile);
-  const rounds = (s.games ?? 0) * ROUNDS;
+  const rounds = s.rounds ?? ((s.games ?? 0) * ROUNDS);
   $("stRate").textContent = rounds
     ? `Ø ${Math.round((s.points ?? 0) / rounds)} von 50 Punkten pro Runde`
     : "Noch kein Spiel gespielt";
@@ -3561,15 +3751,17 @@ const STATUS_TEXT = {
 /* Aus den mitgeschriebenen Rundenpunkten den Endstand ablesen. */
 function gameTally(g){
   const [a, b] = g.players || [];
+  const anzahl = roundsOf(modeOf(g));
+  const wechsel = modeOf(g) === "wechsel";
   let pa = 0, pb = 0, ra = 0, rb = 0, gespielt = 0;
-  for (let i = 0; i < ROUNDS; i++){
-    const s = g.scores?.["r" + i];
+  for (let i = 0; i < anzahl; i++){
+    const s = wechsel ? g.points?.["r" + i] : g.scores?.["r" + i];
     if (!s || s[a] == null || s[b] == null) continue;
     gespielt++;
     pa += s[a]; pb += s[b];
     if (s[a] > s[b]) ra++; else if (s[b] > s[a]) rb++;
   }
-  return { a, b, pa, pb, ra, rb, gespielt };
+  return { a, b, pa, pb, ra, rb, gespielt, anzahl };
 }
 
 function renderGames(){
@@ -3590,7 +3782,7 @@ function renderGames(){
     return `<div class="gm">
       <div class="grow">
         <div class="who">${esc(na)} <span style="color:var(--muted)">gegen</span> ${esc(nb)}</div>
-        <div class="meta">${esc(datum)} · ${esc(STATUS_TEXT[g.status] || g.status)} · ${t.gespielt}/${ROUNDS} Runden · ${esc(configLabel(g.config))}</div>
+        <div class="meta">${esc(datum)} · ${esc(STATUS_TEXT[g.status] || g.status)} · ${t.gespielt}/${t.anzahl} Runden · ${esc(configLabel(g.config))}</div>
       </div>
       <div class="sc" style="color:${farbe}">${t.ra}:${t.rb}</div>
       <div class="meta" style="font-family:var(--mono);font-size:.64rem;color:var(--muted);flex:0 0 auto">${t.pa}:${t.pb}</div>
@@ -3913,6 +4105,334 @@ $("btnAdminAdd").onclick = async () => {
     renderUsers();
   } catch(e){ toast("Fehler: " + (e.code || e.message)); }
   finally { btn.disabled = false; }
+};
+
+/* ══════════════════════════════════════════════════════════════
+   18) Modus „Abwechselnd"
+
+   Beide Spielen dieselbe Liste, setzen aber reihum je einen
+   Kandidaten auf einen Platz. Die Punkte gibt es sofort. Landet
+   ein Eintrag falsch, rutscht er an seine richtige Stelle und der
+   andere ist dran. Nach drei Runden gewinnt, wer mehr Punkte hat.
+
+   Anders als in Klassik muss die Lösung schon während der Runde
+   auf beiden Geräten liegen — anders ließe sich ein Zug nicht
+   sofort bewerten.
+   ══════════════════════════════════════════════════════════════ */
+let altPickCand = null;
+let altPickSlot = null;
+let altRound = -1;
+let altSolCache = null;
+
+const MODE_KEY = "listduell_mode";
+let mode = localStorage.getItem(MODE_KEY) === "wechsel" ? "wechsel" : "klassik";
+
+const MODE_HINT = {
+  klassik: "Fünf Runden. Beide sortieren dieselbe Liste für sich, danach wird verglichen.",
+  wechsel: "Drei Runden. Reihum einen Platz belegen, Punkte sofort. Wer am Ende mehr hat, gewinnt."
+};
+
+function renderModeSeg(){
+  $("modeSeg").querySelectorAll("[data-mode]").forEach(b =>
+    b.classList.toggle("on", b.dataset.mode === mode));
+  $("modeHint").textContent = MODE_HINT[mode];
+}
+$("modeSeg").querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
+  mode = b.dataset.mode;
+  localStorage.setItem(MODE_KEY, mode);
+  renderModeSeg();
+  renderSetup();
+});
+
+/* Wer eine Runde eröffnet: abwechselnd, damit der Vorteil des ersten
+   Zugs nicht immer bei derselben Person liegt. */
+function starterOf(g, n){
+  const first = g.challenger;
+  const other = g.players.find(p => p !== first);
+  return n % 2 === 0 ? first : other;
+}
+
+/* Das Brett liegt als Zuordnung Platz → Eintrag in der Datenbank, nicht
+   als Liste: Firestore kann einzelne Listenelemente nicht mit einem
+   Punktpfad ändern, ganze Listen müsste man ersetzen — und dabei würden
+   sich gleichzeitige Züge gegenseitig überschreiben. */
+const boardOf = (g, n) => {
+  const m = g.board?.[rid(n)] || {};
+  return Array.from({length: 5}, (_, i) => m[String(i)] ?? null);
+};
+const usedOf  = (g, n) => (g.used?.[rid(n)]  || []);
+const movesOf = (g, n) => (g.moves?.[rid(n)] || []);
+const boardVoll = (g, n) => boardOf(g, n).every(Boolean);
+
+/* ---------- Einstieg aus dem Spielverlauf ---------- */
+async function enterActiveAlt(gid){
+  const g = currentGame;
+  const n = g.round ?? 0;
+
+  const sol = await loadSolution(gid, n);
+  altSolCache = sol;
+  if (!sol){
+    toast("Die Runde ließ sich nicht laden. Ich versuche es weiter …");
+    setTimeout(refreshGame, 1500);
+    return;
+  }
+
+  if (boardVoll(g, n)){
+    renderAltDone(n, sol);
+    const ready = g.ready?.[rid(n)] || {};
+    const opp = oppUid();
+    if (ready[me.uid] && ready[opp] && once("adv:" + gid + ":" + n)){
+      try {
+        if (n + 1 < roundCount()){
+          await updateDoc(gameRefOf(gid), {
+            round: n + 1,
+            turn: starterOf(g, n + 1)
+          });
+        } else {
+          await updateDoc(gameRefOf(gid), { status: "finished", finishedAt: serverTimestamp() });
+          push(opp, "listdone");
+        }
+      } catch(_){}
+    }
+    return;
+  }
+
+  renderAlt(n, sol);
+}
+
+/* ---------- Spielbrett ---------- */
+function renderAlt(n, sol){
+  const g = currentGame;
+  const opp = oppUid();
+  const dran = g.turn === me.uid;
+
+  if (altRound !== n){ altPickCand = null; altPickSlot = null; altRound = n; }
+
+  barHTML(n, "altBar");
+  $("altLabel").textContent = `Runde ${n+1} von ${roundCount()}`;
+  $("altQuestion").textContent = g.rounds?.[n]?.q || "—";
+  $("altUnit").textContent = g.rounds?.[n]?.unit ? `sortiert nach: ${g.rounds[n].unit}` : "";
+  $("altConfig").innerHTML =
+    `<span class="pill">${esc(configLabel(g.config))}</span>`
+  + `<span class="pill live">Abwechselnd</span>`;
+
+  renderAltScore(n);
+
+  const t = $("altTurn");
+  t.classList.toggle("mine", dran);
+  t.textContent = dran ? "Du bist am Zug" : `${nameOf(opp)} ist am Zug`;
+
+  renderAltBoard(n, sol, dran);
+  renderAltPool(n, dran);
+  renderAltFlash(n, sol);
+
+  const bereit = dran && altPickCand && altPickSlot !== null;
+  $("btnAltPlay").disabled = !bereit;
+  $("btnAltPlay").textContent = dran ? "Setzen" : "Nicht am Zug";
+  $("altHint").textContent = !dran
+    ? "Warte, bis du wieder dran bist."
+    : altPickCand === null
+      ? "Wähle einen Kandidaten."
+      : altPickSlot === null
+        ? "Wähle jetzt einen freien Platz."
+        : "Zehn Punkte für den richtigen Platz, fünf für einen daneben.";
+
+  show("screen-alt");
+}
+
+function renderAltScore(n){
+  const g = currentGame, opp = oppUid();
+  const mp = g.points?.[rid(n)]?.[me.uid] ?? 0;
+  const op = g.points?.[rid(n)]?.[opp] ?? 0;
+  // Gesamt über alle bisherigen Runden — hier zählt am Ende die Summe.
+  let gm = 0, go = 0;
+  for (let i = 0; i < roundCount(); i++){
+    gm += g.points?.[rid(i)]?.[me.uid] ?? 0;
+    go += g.points?.[rid(i)]?.[opp] ?? 0;
+  }
+  $("altScore").innerHTML =
+    `<div class="${gm > go ? "win":""}"><div class="n">${gm}</div><div class="l">Du · Runde ${mp}</div></div>
+     <div class="${go > gm ? "win":""}"><div class="n">${go}</div><div class="l">${esc(nameOf(opp))} · Runde ${op}</div></div>`;
+}
+
+function renderAltBoard(n, sol, dran){
+  const g = currentGame;
+  const board = boardOf(g, n);
+  const moves = movesOf(g, n);
+
+  $("altBoard").innerHTML = board.map((v, i) => {
+    if (v){
+      const zug = moves.find(m => m.cand === v);
+      const wer = zug ? (zug.uid === me.uid ? "Du" : nameOf(oppUid()).slice(0,7)) : "";
+      const wert = sol.values?.[v];
+      return `<div class="slot locked">
+        <span class="rk">${i+1}</span>
+        <span class="val">${esc(v)}</span>
+        ${wert ? `<span class="sv">${esc(wert)}</span>` : ""}
+        <span class="by">${esc(wer)}</span>
+      </div>`;
+    }
+    const gewaehlt = altPickSlot === i;
+    return `<button class="slot ${gewaehlt ? "pick" : ""}" data-altslot="${i}" ${dran ? "" : "disabled"}>
+      <span class="rk">${i+1}</span>
+      <span class="empty-t">${gewaehlt ? "hierhin" : "frei"}</span>
+    </button>`;
+  }).join("");
+
+  $("altBoard").querySelectorAll("[data-altslot]").forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.altslot);
+    altPickSlot = altPickSlot === i ? null : i;
+    renderAlt(n, sol);
+  });
+}
+
+function renderAltPool(n, dran){
+  const g = currentGame;
+  const board = boardOf(g, n);
+  const used  = usedOf(g, n);
+  const offen = (g.rounds?.[n]?.options || [])
+    .filter(o => !used.includes(o) && !board.includes(o));
+
+  $("altPool").innerHTML = offen.map(o =>
+    `<button class="chip ${altPickCand === o ? "pick" : ""}" data-altcand="${esc(o)}" ${dran ? "" : "disabled"}>${esc(o)}</button>`
+  ).join("") || `<div class="empty">Nichts mehr übrig.</div>`;
+
+  $("altPool").querySelectorAll("[data-altcand]").forEach(b => b.onclick = () => {
+    const c = b.dataset.altcand;
+    altPickCand = altPickCand === c ? null : c;
+    renderAlt(n, altSolCache);
+  });
+}
+
+/* Der letzte Zug als Rückmeldung — für beide Seiten sichtbar. */
+function renderAltFlash(n, sol){
+  const moves = movesOf(currentGame, n);
+  const f = $("altFlash");
+  if (!moves.length){ f.classList.add("hidden"); return; }
+
+  const m = moves[moves.length - 1];
+  const wer = m.uid === me.uid ? "Du hast" : `${nameOf(oppUid())} hat`;
+  const cls = m.pts === 10 ? "good" : m.pts === 5 ? "half" : "zero";
+  const richtig = sol.top.findIndex(t => norm(t) === norm(m.cand));
+
+  let satz;
+  if (richtig === -1){
+    satz = `${wer} <strong>${esc(m.cand)}</strong> gesetzt — gehört gar nicht in die Liste.`;
+  } else if (m.pts === 10){
+    satz = `${wer} <strong>${esc(m.cand)}</strong> genau auf Platz ${richtig + 1} gesetzt.`;
+  } else {
+    satz = `${wer} <strong>${esc(m.cand)}</strong> auf Platz ${m.slot + 1} gesetzt — richtig ist Platz ${richtig + 1}.`;
+  }
+
+  f.className = "flash " + cls;
+  f.innerHTML = `<b>+${m.pts}</b> &nbsp; ${satz}`;
+}
+
+/* ---------- Zug abgeben ---------- */
+$("btnAltPlay").onclick = async () => {
+  const g = currentGame;
+  if (!g || g.turn !== me.uid) return;
+  if (!altPickCand || altPickSlot === null) return;
+
+  const n = g.round ?? 0;
+  const sol = altSolCache || await loadSolution(currentGameId, n);
+  if (!sol) return;
+
+  const cand = altPickCand, slot = altPickSlot;
+  const richtig = sol.top.findIndex(t => norm(t) === norm(cand));
+  const pts = richtig === -1 ? 0
+            : richtig === slot ? 10
+            : Math.abs(richtig - slot) === 1 ? 5 : 0;
+
+  const opp = oppUid();
+  const patch = {
+    [`used.${rid(n)}`]: arrayUnion(cand),
+    [`points.${rid(n)}.${me.uid}`]: increment(pts),
+    [`moves.${rid(n)}`]: arrayUnion({ uid: me.uid, cand, slot, pts, at: Date.now() }),
+    turn: opp
+  };
+  // Gehört der Eintrag in die Liste, rutscht er auf seinen richtigen Platz.
+  if (richtig !== -1) patch[`board.${rid(n)}.${richtig}`] = cand;
+
+  altPickCand = null; altPickSlot = null;
+  $("btnAltPlay").disabled = true;
+
+  try {
+    await updateDoc(gameRefOf(currentGameId), patch);
+    push(opp, "listturn");
+  } catch(e){
+    toast("Zug fehlgeschlagen: " + (e.code || e.message));
+  }
+};
+
+$("btnAltAbort").onclick = () => abortGame($("btnAltAbort"));
+
+/* ---------- Runde vorbei ---------- */
+function renderAltDone(n, sol){
+  const g = currentGame, opp = oppUid();
+  const board = boardOf(g, n);
+  const moves = movesOf(g, n);
+
+  barHTML(n, "altDoneBar");
+  $("altDoneLabel").textContent = `Runde ${n+1} von ${roundCount()}`;
+  $("altDoneQuestion").textContent = g.rounds?.[n]?.q || "—";
+
+  const mp = g.points?.[rid(n)]?.[me.uid] ?? 0;
+  const op = g.points?.[rid(n)]?.[opp] ?? 0;
+  $("altDoneScore").innerHTML =
+    `<div class="${mp > op ? "win":""}"><div class="n">${mp}</div><div class="l">Du</div></div>
+     <div class="${op > mp ? "win":""}"><div class="n">${op}</div><div class="l">${esc(nameOf(opp))}</div></div>`;
+
+  $("altDoneList").innerHTML = board.map((v, i) => {
+    const zug = moves.find(m => m.cand === v);
+    const wer = !zug ? "—" : zug.uid === me.uid ? "Du" : nameOf(opp);
+    const wert = sol.values?.[v];
+    const p = zug?.pts ?? 0;
+    const cls = p === 10 ? "p10" : p === 5 ? "p5" : "p0";
+    return `<div class="mv">
+      <div class="rk">${i+1}</div>
+      <div class="grow">
+        <div class="nm">${esc(v || "—")}</div>
+        <div class="sub">${esc(wer)}${wert ? " · " + esc(wert) : ""}</div>
+      </div>
+      <div class="pts ${cls}">+${p}</div>
+    </div>`;
+  }).join("");
+
+  // Kandidaten, die niemand losgeworden ist oder die daneben lagen
+  const daneben = moves.filter(m => !sol.top.some(t => norm(t) === norm(m.cand)));
+  $("altDoneRestBox").innerHTML = daneben.length
+    ? daneben.map(m => {
+        const wer = m.uid === me.uid ? "Du" : nameOf(opp);
+        return `<div class="restrow"><span class="txt">${esc(m.cand)}</span>`
+             + `<span class="wert">${esc(wer)} · ${esc(sol.values?.[m.cand] || "—")}</span></div>`;
+      }).join("")
+    : "";
+  $("altDoneRest").classList.toggle("hidden", !daneben.length);
+
+  $("altDoneNote").textContent = sol.note || "";
+
+  const b = $("btnAltNext");
+  const ready = g.ready?.[rid(n)] || {};
+  const last = n + 1 >= roundCount();
+  if (ready[me.uid]){
+    b.disabled = true;
+    b.textContent = `Warte auf ${nameOf(opp)} …`;
+  } else {
+    b.disabled = false;
+    b.textContent = last ? "Endstand ansehen" : "Weiter zu Runde " + (n + 2);
+  }
+
+  show("screen-altdone");
+}
+
+$("btnAltNext").onclick = async () => {
+  if (!currentGameId) return;
+  const n = currentGame.round ?? 0;
+  const b = $("btnAltNext"); b.disabled = true;
+  try {
+    await updateDoc(gameRefOf(currentGameId), { [`ready.${rid(n)}.${me.uid}`]: true });
+  } catch(e){ toast("Fehler: " + (e.code || e.message)); b.disabled = false; }
 };
 </script>
 </body>
