@@ -41,7 +41,8 @@ function baueAufgabe(count, thema, stufe, avoid) {
 
   return `Erstelle ${count} Fragen für ein Quiz, bei dem zwei Spieler die richtige Reihenfolge einer Top-5-Liste herstellen müssen.
 
-Themenbereich: ${thema}
+Themenvorgabe: ${thema}
+Halte dich an diese Vorgabe. Ist sie eng gefasst, bleib streng dabei; ist sie weit, streue die Fragen darin.
 Schwierigkeit: ${s.name}. ${s.regel}
 Ein Beispiel für diese Stufe: „${s.beispiel}“
 
@@ -110,17 +111,20 @@ export default async function handler(req, res) {
   }
 
   const body = req.body || {};
-  const count = Math.min(8, Math.max(1, Number(body.count) || 5));
+  const count = Math.min(12, Math.max(1, Number(body.count) || 5));
   const stufe = [1, 2, 3, 4].includes(Number(body.difficulty)) ? Number(body.difficulty) : 2;
   const wunsch = typeof body.category === "string" && body.category.trim() ? body.category.trim() : null;
-  const avoid = (Array.isArray(body.avoid) ? body.avoid : []).map(String).filter(Boolean).slice(-80);
+  // Freie Themenvorgabe aus dem Adminfenster. Sie sticht den Bereich aus.
+  const topic = typeof body.topic === "string" && body.topic.trim()
+    ? body.topic.trim().slice(0, 400) : null;
+  const avoid = (Array.isArray(body.avoid) ? body.avoid : []).map(String).filter(Boolean).slice(-200);
   const blocked = new Set(avoid.map(norm));
 
-  // Bei "Gemischt" ein paar Bereiche auslosen, damit die fünf Runden auseinanderliegen.
-  const thema = wunsch
-    ? wunsch
-    : "gemischt — verteile die Fragen auf verschiedene Bereiche wie " +
-      [...THEMEN].sort(() => Math.random() - 0.5).slice(0, 5).join(", ");
+  // Ohne Vorgabe ein paar Bereiche auslosen, damit die Fragen auseinanderliegen.
+  const thema = topic
+    || wunsch
+    || ("gemischt — verteile die Fragen auf verschiedene Bereiche wie " +
+        [...THEMEN].sort(() => Math.random() - 0.5).slice(0, 5).join(", "));
 
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
@@ -133,7 +137,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         // Für die Richtigkeit der Listen lohnt sich das stärkere Modell.
         model: "claude-sonnet-4-6",
-        max_tokens: 4000,
+        max_tokens: Math.min(16000, 700 * (count + 2) + 800),
         temperature: 1,
         messages: [{ role: "user", content: baueAufgabe(count + 2, thema, stufe, avoid) }]
       })
@@ -164,6 +168,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       rounds: rounds.slice(0, count),
       category: wunsch,
+      topic,
       difficulty: stufe
     });
   } catch (e) {
