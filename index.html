@@ -448,6 +448,14 @@
   .arch .sol b{color:var(--paper);font-weight:700}
   .arch .sol .v{font-family:var(--mono);font-size:.72rem;color:var(--yellow)}
   .arch .dec{font-size:.78rem;color:var(--muted);margin-top:4px;line-height:1.5}
+  .genbar{
+    height:6px;border-radius:999px;background:var(--ink);border:1px solid var(--line);
+    overflow:hidden;margin-top:14px
+  }
+  .genbar > i{
+    display:block;height:100%;width:0;background:var(--yellow);
+    border-radius:999px;transition:width .35s ease
+  }
   .gm{display:flex;gap:10px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}
   .gm:first-child{border-top:0}
   .gm .who{font-weight:700;font-size:.93rem}
@@ -854,6 +862,34 @@
         <button class="btn ghost sm grow" id="btnArchReload">Neu laden</button>
         <button class="btn ghost sm grow" id="btnArchExport">Exportieren</button>
       </div>
+    </div>
+
+    <div class="card">
+      <h3>Listen erzeugen lassen</h3>
+      <p class="dim" style="font-size:.82rem;margin:2px 0 12px">Neue Fragen samt Lösung und Zahlenwerten über die API. Sie landen sofort im Archiv und stehen allen Spielern zur Verfügung.</p>
+
+      <label for="genTopic">Themenvorgabe</label>
+      <input type="text" id="genTopic" placeholder="z. B. Flüsse und Seen in Europa" autocomplete="off" />
+      <p class="dim" style="font-size:.78rem;margin:6px 0 0">Frei formulierbar. Leer lassen für bunt gemischt.</p>
+
+      <div style="height:12px"></div>
+      <label for="genCategory">Bereich zum Einsortieren</label>
+      <select id="genCategory"></select>
+
+      <div style="height:12px"></div>
+      <label>Schwierigkeit</label>
+      <div class="levels" id="genLevel"></div>
+
+      <div style="height:12px"></div>
+      <label for="genCount">Anzahl</label>
+      <div class="row">
+        <input type="text" id="genCount" value="10" inputmode="numeric" autocomplete="off" />
+        <button class="btn sm yellow" id="btnGenerate" style="flex:0 0 auto">Erzeugen</button>
+      </div>
+
+      <div class="genbar hidden" id="genBar"><i></i></div>
+      <p class="dim" id="genStatus" style="font-size:.84rem;margin-top:10px"></p>
+      <button class="btn ghost sm hidden" id="btnGenStop" style="width:100%;margin-top:8px">Abbrechen</button>
     </div>
 
     <div class="card">
@@ -3412,6 +3448,7 @@ $("btnAdminBack").onclick = () => show("screen-options");
 $("btnAdmin").onclick = async () => {
   if (!amAdmin()){ toast("Kein Zugriff."); return; }
   show("screen-admin");
+  renderGenForm();
   await loadUsers();
   await loadGames();
   await loadArchive();
@@ -3659,6 +3696,144 @@ $("btnArchImport").onclick = async () => {
     await loadArchive();
   } catch(e){ toast("Fehler: " + (e.message || e.code)); }
   finally { btn.disabled = false; }
+};
+
+/* ---------- Listen erzeugen lassen ----------
+   Ruft die API in Häppchen auf, prüft jede Runde, wirft Dopplungen
+   heraus und legt den Rest ins Archiv. Von dort bedienen sich alle
+   Spieler, ohne dass beim Spielstart noch etwas erzeugt werden muss. */
+const GEN_BATCH = 6;      // Runden je API-Aufruf
+const GEN_MAX   = 60;     // Obergrenze für einen Durchlauf
+let genLevel = 2;
+let genAbort = false;
+let genLaeuft = false;
+
+function renderGenForm(){
+  const sel = $("genCategory");
+  sel.innerHTML = `<option value="">Gemischt — ohne Bereich</option>` +
+    CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+
+  $("genLevel").innerHTML = LEVELS.map(l =>
+    `<button class="level ${genLevel === l.n ? "on" : ""}" data-gen="${l.n}">
+       <div class="n">${l.n}</div><div class="t">${l.t}</div>
+     </button>`).join("");
+  $("genLevel").querySelectorAll("[data-gen]").forEach(b => b.onclick = () => {
+    genLevel = Number(b.dataset.gen); renderGenForm();
+  });
+}
+
+function genFortschritt(fertig, ziel, text){
+  $("genBar").classList.remove("hidden");
+  $("genBar").querySelector("i").style.width = Math.round(fertig / ziel * 100) + "%";
+  $("genStatus").textContent = text;
+}
+
+async function generateBatch({ topic, category, difficulty, count, avoid }){
+  const r = await fetch(LISTS_ENDPOINT, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ topic, category, difficulty, count, avoid })
+  });
+  if (!r.ok) throw new Error("API antwortete mit " + r.status);
+  const d = await r.json();
+  return (d.rounds || [])
+    .map(x => ({
+      q: String(x.q || ""), unit: String(x.unit || ""),
+      top: (x.top || []).map(s => String(s).trim()),
+      decoys: (x.decoys || []).map(s => String(s).trim()),
+      values: x.values || {}, note: String(x.note || "")
+    }))
+    .filter(sane)
+    .map(withValues);
+}
+
+$("btnGenStop").onclick = () => {
+  genAbort = true;
+  $("genStatus").textContent = "Wird nach dem laufenden Aufruf angehalten …";
+};
+
+$("btnGenerate").onclick = async () => {
+  if (genLaeuft) return;
+  const topic = $("genTopic").value.trim() || null;
+  const category = $("genCategory").value || null;
+  const ziel = Math.min(GEN_MAX, Math.max(1, parseInt($("genCount").value, 10) || 0));
+  if (!ziel){ toast("Wie viele Listen sollen es sein?"); return; }
+
+  genLaeuft = true; genAbort = false;
+  const btn = $("btnGenerate");
+  btn.disabled = true; btn.textContent = "Läuft …";
+  $("btnGenStop").classList.remove("hidden");
+
+  // Was schon im Archiv liegt, muss nicht noch einmal entstehen.
+  const bekannt = new Set(archCache.map(r => qKey(r.q)));
+  const avoid = archCache.map(r => r.q);
+  let neu = 0, doppelt = 0, versuche = 0, leerlauf = 0;
+
+  try {
+    // Schluss ist, wenn das Ziel erreicht ist, jemand abbricht, oder zwei
+    // Aufrufe hintereinander nichts Neues mehr bringen — sonst zahlt man
+    // für Wiederholungen.
+    while (neu < ziel && !genAbort && versuche < 12 && leerlauf < 2){
+      versuche++;
+      genFortschritt(neu, ziel, `${neu} von ${ziel} — die API arbeitet …`);
+
+      const rest = Math.min(GEN_BATCH, ziel - neu);
+      let runden = [];
+      try {
+        runden = await generateBatch({
+          topic, category, difficulty: genLevel,
+          count: rest, avoid: avoid.slice(-200)
+        });
+      } catch(e){
+        toast("Aufruf fehlgeschlagen: " + (e.message || e));
+        break;
+      }
+
+      if (!runden.length){
+        genFortschritt(neu, ziel, `${neu} von ${ziel} — der letzte Aufruf brachte nichts Brauchbares.`);
+        continue;
+      }
+
+      const vorher = neu;
+      for (const v of runden){
+        if (neu >= ziel) break;
+        const key = qKey(v.q);
+        if (bekannt.has(key)){ doppelt++; continue; }
+        bekannt.add(key);
+        avoid.push(v.q);
+
+        await setDoc(doc(db, ARCHIVE, key), {
+          q: v.q, unit: v.unit, top: v.top, decoys: v.decoys,
+          values: v.values, note: v.note,
+          category: category,
+          topic: topic,
+          difficulty: genLevel,
+          source: "admin",
+          uses: increment(0),          // legt 0 an, lässt Vorhandenes stehen
+          createdAt: serverTimestamp(),
+          lastAt: serverTimestamp()
+        }, { merge: true });
+
+        neu++;
+        genFortschritt(neu, ziel, `${neu} von ${ziel} angelegt …`);
+      }
+      leerlauf = (neu === vorher) ? leerlauf + 1 : 0;
+    }
+
+    const schluss = genAbort
+      ? `Angehalten. ${neu} neue Listen sind im Archiv.`
+      : neu >= ziel
+        ? `Fertig — ${neu} neue Listen im Archiv.`
+        : `${neu} von ${ziel} angelegt. Die API lieferte kaum noch Neues zu diesem Thema.`;
+    $("genStatus").textContent = schluss + (doppelt ? ` ${doppelt} Dopplung${doppelt === 1 ? "" : "en"} übersprungen.` : "");
+    if (neu) toast(`${neu} Listen hinzugefügt.`);
+
+    await loadArchive();
+    renderAdminStats();
+  } finally {
+    genLaeuft = false; genAbort = false;
+    btn.disabled = false; btn.textContent = "Erzeugen";
+    $("btnGenStop").classList.add("hidden");
+  }
 };
 
 /* ---------- Zahlen ---------- */
