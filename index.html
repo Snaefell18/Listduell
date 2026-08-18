@@ -290,6 +290,40 @@
   .pk .p.p5{color:var(--yellow)}
   .pk .p.p0{color:var(--muted)}
 
+  /* ---------- Auflösung Platz für Platz ---------- */
+  .matchball{
+    margin-top:14px;padding:12px 14px;border-radius:14px;text-align:center;
+    border:1px dashed rgba(255,201,60,.55);background:rgba(255,201,60,.09);
+    font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--yellow);line-height:1.6;
+    animation:matchPulse 2.4s ease-in-out infinite
+  }
+  @keyframes matchPulse{
+    0%,100%{border-color:rgba(255,201,60,.35);background:rgba(255,201,60,.06)}
+    50%    {border-color:rgba(255,201,60,.8); background:rgba(255,201,60,.14)}
+  }
+  .rev.pending .revfull{display:none}
+  .rev:not(.pending) .revhold{display:none}
+  .revhold{
+    display:flex;align-items:center;gap:8px;min-height:52px;
+    font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.1em
+  }
+  .revhold i{
+    display:block;height:9px;border-radius:999px;background:var(--ink);
+    border:1px solid var(--line);flex:1
+  }
+  .rev.just .revfull{animation:revIn .5s cubic-bezier(.16,1.15,.3,1) both}
+  @keyframes revIn{
+    from{opacity:0;transform:translateY(9px) scale(.97)}
+    to  {opacity:1;transform:none}
+  }
+  .duelscore .n.tick{animation:tick .45s cubic-bezier(.16,1.3,.3,1)}
+  @keyframes tick{0%{transform:scale(1)}45%{transform:scale(1.22)}100%{transform:scale(1)}}
+  .decide{
+    text-align:center;margin-top:14px;font-family:var(--display);font-weight:700;
+    font-size:1.05rem;color:var(--yellow);letter-spacing:-.01em
+  }
+
   .duelscore{display:flex;gap:10px;margin-top:14px}
   .duelscore > div{
     flex:1;background:var(--ink);border:1px solid var(--line);border-radius:14px;
@@ -1039,12 +1073,17 @@
     <div class="eyebrow" id="revLabel">Runde 1 von 5</div>
     <h2 id="revQuestion" style="margin-top:9px">—</h2>
 
+    <div class="matchball hidden" id="revMatch"></div>
+
     <div class="duelscore" id="revScore"></div>
 
     <div class="card" style="margin-top:14px">
       <div class="eyebrow">Die richtige Reihenfolge</div>
       <div id="revList" style="margin-top:6px"></div>
+      <button class="btn ghost sm hidden" id="btnRevealAll" style="width:100%;margin-top:12px">Alles aufdecken</button>
     </div>
+
+    <p class="decide hidden" id="revDecide"></p>
 
     <div class="card hidden" id="revRest">
       <div class="eyebrow">Die übrigen Vorschläge</div>
@@ -1159,7 +1198,7 @@ import { getMessaging, getToken, isSupported } from "https://www.gstatic.com/fir
 import {
   getFirestore, initializeFirestore,
   doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  query, where, limit, orderBy, onSnapshot, runTransaction,
+  query, where, limit, orderBy, onSnapshot, runTransaction, writeBatch,
   arrayUnion, arrayRemove, increment, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
@@ -2213,10 +2252,14 @@ async function acceptChallenge(gid, btn){
     }
     const g = gSnap.data();
 
-    $("waitTitle").textContent = "Fragen werden gebaut";
-    $("waitText").textContent = "Einen Moment — die fünf Listen entstehen gerade.";
-    show("screen-waiting");
-    $("btnCancelChallenge").classList.add("hidden");
+    // Sofort umschalten, noch bevor die Fragen entstehen. Sonst sieht der
+    // Herausforderer minutenlang „Warte auf Antwort", obwohl es längst
+    // losgegangen ist.
+    await updateDoc(gameRefOf(gid), { status: "preparing" });
+    await updateDoc(userRef(me.uid), { [ACTIVE]: gid });
+    deleteDoc(doc(db,"users",me.uid,INVITES,gid)).catch(()=>{});
+    push(g.challenger, "listaccepted");
+    watchGame(gid);
 
     const avoid = await collectRecentQuestions(g.challenger, g.opponent);
     const data  = await buildRounds(avoid, g.config);
@@ -2231,31 +2274,35 @@ async function acceptChallenge(gid, btn){
     // Lösung samt Zahlenwerten liegt getrennt und ist laut Regeln erst
     // lesbar, wenn beide für die jeweilige Runde abgegeben haben — die
     // Werte allein würden die Reihenfolge ja schon verraten.
-    await Promise.all(data.map((r, i) =>
-      setDoc(doc(db, GAMES, gid, "secrets", "r" + i), {
+    // Alles in einem Rutsch: ein Netzweg statt sechs.
+    const batch = writeBatch(db);
+    data.forEach((r, i) => {
+      batch.set(doc(db, GAMES, gid, "secrets", "r" + i), {
         top: r.top,
         values: r.values || {},
         note: r.note || ""
-      })
-    ));
-
-    await updateDoc(gameRefOf(gid), {
+      });
+    });
+    batch.update(gameRefOf(gid), {
       status: "active",
       rounds: publicRounds,
       round: 0,
       startedAt: serverTimestamp()
     });
-    await updateDoc(userRef(me.uid), { [ACTIVE]: gid });
-    await deleteDoc(doc(db,"users",me.uid,INVITES,gid));
+    await batch.commit();
+
+    // Wer die Runden gebaut hat, kennt die Lösungen bereits — dann muss
+    // beim Aufdecken nichts mehr nachgeladen werden.
+    data.forEach((r, i) => solutionCache.set(gid + ":r" + i, {
+      top: r.top, values: r.values || {}, note: r.note || ""
+    }));
+
     rememberQuestions(gid, publicRounds.map(r => r.q));
-    push(g.challenger, "listaccepted");
-    $("btnCancelChallenge").classList.remove("hidden");
-    watchGame(gid);
   } catch(e){
-    $("btnCancelChallenge").classList.remove("hidden");
     toast("Start fehlgeschlagen: " + (e.code || e.message));
     if (btn){ btn.disabled = false; btn.textContent = "Annehmen"; }
-    show("screen-home");
+    try { await updateDoc(gameRefOf(gid), { status: "cancelled" }); } catch(_){}
+    await leaveGame();
   }
 }
 
@@ -2383,13 +2430,14 @@ function qKey(q){
 }
 
 async function collectRecentQuestions(uidA, uidB){
+  const snaps = await Promise.all(
+    [uidA, uidB].map(uid => getDoc(userRef(uid)).catch(() => null))
+  );
   const out = new Set();
-  for (const uid of [uidA, uidB]){
-    try {
-      const s = await getDoc(userRef(uid));
-      (s.exists() ? (s.data().recentLists || []) : []).slice(-RECENT_LIMIT).forEach(q => out.add(q));
-    } catch(_){}
-  }
+  snaps.forEach(s => {
+    if (!s || !s.exists()) return;
+    (s.data().recentLists || []).slice(-RECENT_LIMIT).forEach(q => out.add(q));
+  });
   return [...out];
 }
 
@@ -2572,28 +2620,59 @@ function watchGame(gid){
     async snap => {
       if (!snap.exists()){ await leaveGame(); return; }
       if (snap.metadata.hasPendingWrites) return;
-
-      currentGame = snap.data();
-      const s = currentGame.status;
-
-      if (s === "pending"){
-        if (currentGame.challenger === me.uid){
-          $("waitTitle").textContent = "Herausforderung verschickt";
-          $("waitText").textContent = `Warte auf ${nameOf(currentGame.opponent)} …`;
-          show("screen-waiting");
-        }
-        return;
-      }
-      if (s === "declined"){  toast("Die Herausforderung wurde abgelehnt.");     await leaveGame(); return; }
-      if (s === "cancelled"){ toast("Das Spiel wurde abgebrochen.");             await leaveGame(); return; }
-      if (s === "active"){    await enterActive(gid);   return; }
-      if (s === "finished"){  await showFinal(gid);     return; }
+      await handleGame(gid, snap.data());
     },
     err => {
       toast("Spiel lädt nicht: " + (err.code || err.message));
     }
   );
 }
+
+async function handleGame(gid, daten){
+  currentGame = daten;
+  const s = currentGame.status;
+
+  if (s === "pending"){
+    if (currentGame.challenger === me.uid){
+      $("waitTitle").textContent = "Herausforderung verschickt";
+      $("waitText").textContent = `Warte auf ${nameOf(currentGame.opponent)} …`;
+      $("btnCancelChallenge").classList.remove("hidden");
+      show("screen-waiting");
+    }
+    return;
+  }
+  if (s === "preparing"){
+    // Beide sehen dasselbe: der eine baut, der andere weiß Bescheid.
+    $("waitTitle").textContent = "Die Fragen entstehen";
+    $("waitText").textContent = "Einen Moment — die fünf Listen werden zusammengestellt.";
+    $("btnCancelChallenge").classList.add("hidden");
+    show("screen-waiting");
+    return;
+  }
+  if (s === "declined"){  toast("Die Herausforderung wurde abgelehnt."); await leaveGame(); return; }
+  if (s === "cancelled"){ toast("Das Spiel wurde abgebrochen.");         await leaveGame(); return; }
+  if (s === "active"){    await enterActive(gid);   return; }
+  if (s === "finished"){  await showFinal(gid);     return; }
+}
+
+/* Kommt die App aus dem Hintergrund zurück, kann der Listener ein paar
+   Sekunden brauchen, bis er wieder hängt. Ein einzelner Abruf holt den
+   Stand sofort — sonst sitzt man vor einem Bildschirm, der längst
+   überholt ist. */
+let refreshLaeuft = false;
+async function refreshGame(){
+  if (!currentGameId || refreshLaeuft) return;
+  refreshLaeuft = true;
+  try {
+    const snap = await getDoc(gameRefOf(currentGameId));
+    if (snap.exists()) await handleGame(currentGameId, snap.data());
+  } catch(_){}
+  finally { refreshLaeuft = false; }
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refreshGame();
+});
+window.addEventListener("focus", refreshGame);
 
 async function enterActive(gid){
   const g = currentGame;
@@ -2617,8 +2696,20 @@ async function enterActive(gid){
   }
 
   // Beide haben abgegeben — Lösung darf jetzt gelesen werden.
-  const sol = await loadSolution(gid, n);
-  if (!sol) return;
+  let sol = solutionCache.get(gid + ":" + key);
+  if (!sol){
+    // Kurz Bescheid geben, statt den alten Bildschirm stehen zu lassen.
+    $("waitOppText").textContent = "Beide fertig — die Auflösung wird geholt …";
+    $("waitOppList").innerHTML = mine.map((v,i) =>
+      `<div class="rrow"><span class="n">Platz ${i+1}</span><span class="q">${esc(v)}</span></div>`).join("");
+    show("screen-wait-opp");
+    sol = await loadSolution(gid, n);
+  }
+  if (!sol){
+    toast("Die Auflösung ließ sich nicht laden. Ich versuche es weiter …");
+    setTimeout(refreshGame, 1500);
+    return;
+  }
 
   // Eigenes Ergebnis einmalig festhalten, damit der Endstand für
   // beide Seiten aus denselben Zahlen entsteht.
@@ -2645,11 +2736,25 @@ async function enterActive(gid){
 async function loadSolution(gid, n){
   const ck = gid + ":" + rid(n);
   if (solutionCache.has(ck)) return solutionCache.get(ck);
-  const s = await getDocRetry(doc(db, GAMES, gid, "secrets", rid(n)), 6);
-  if (!s) return null;
-  const d = s.data();
-  solutionCache.set(ck, d);
-  return d;
+
+  /* Die Regel gibt die Lösung erst frei, wenn beide Antworten auf dem
+     Server liegen. Kommt der Schnappschuss einen Wimpernschlag früher an
+     als die Freigabe greift, scheitert der erste Versuch — deshalb hier
+     kurze Abstände statt der trägen Standardschleife. */
+  const ref = doc(db, GAMES, gid, "secrets", rid(n));
+  const pausen = [0, 120, 200, 320, 500, 800, 1200, 1800];
+  for (const ms of pausen){
+    if (ms) await sleep(ms);
+    try {
+      const s = await getDoc(ref);
+      if (s.exists()){
+        const d = s.data();
+        solutionCache.set(ck, d);
+        return d;
+      }
+    } catch(_){}
+  }
+  return null;
 }
 
 /* ---------- Punkte ---------- */
@@ -2733,6 +2838,8 @@ function barHTML(n, boxId){
 
 /* ---------- Runde spielen ---------- */
 function renderRound(n){
+  clearRevealTimers();
+  revealKey = null;
   const r = currentGame.rounds?.[n];
   if (!r){ toast("Die Runde konnte nicht geladen werden."); return; }
 
@@ -2795,41 +2902,107 @@ $("btnSubmitList").onclick = async () => {
   btn.textContent = "Liste abgeben";
 };
 
-/* ---------- Auflösung ---------- */
+/* ---------- Auflösung ----------
+   Steht es 2:x, kann diese Runde das Spiel entscheiden. Dann deckt sich
+   die Lösung Platz für Platz auf und der Punktestand zählt mit, statt
+   alles auf einen Schlag hinzuwerfen. Sonst erscheint sofort alles. */
+let revealKey = null;
+let revealCtx = null;
+let revealTimers = [];
+
+function clearRevealTimers(){
+  revealTimers.forEach(clearTimeout);
+  revealTimers = [];
+}
+
 function renderReveal(n, sol, mine, theirs, iAmReady){
+  const key = currentGameId + ":" + rid(n);
   const opp = oppUid();
   const r = currentGame.rounds[n];
-  const myPts  = scoreOf(mine, sol.top);
-  const oppPts = scoreOf(theirs, sol.top);
 
-  barHTML(n, "revBar");
-  $("revLabel").textContent = `Runde ${n+1} von ${ROUNDS}`;
-  $("revQuestion").textContent = r.q;
+  // Nur einmal pro Runde aufbauen — sonst würde jeder Schnappschuss vom
+  // Gegner die Animation von vorn beginnen lassen.
+  if (revealKey !== key){
+    clearRevealTimers();
+    revealKey = key;
 
-  $("revScore").innerHTML =
-    `<div class="${myPts > oppPts ? "win":""}"><div class="n">${myPts}</div><div class="l">Du</div></div>
-     <div class="${oppPts > myPts ? "win":""}"><div class="n">${oppPts}</div><div class="l">${esc(nameOf(opp))}</div></div>`;
+    let vorMe = 0, vorOpp = 0;
+    for (let i = 0; i < n; i++){
+      const o = roundOutcome(i);
+      if (o === "me") vorMe++; else if (o === "opp") vorOpp++;
+    }
+    const matchball = vorMe === 2 || vorOpp === 2;
+
+    revealCtx = { n, key, sol, mine, theirs, opp, r, matchball, vorMe, vorOpp,
+                  step: 0, done: !matchball };
+
+    barHTML(n, "revBar");
+    $("revLabel").textContent = `Runde ${n+1} von ${ROUNDS}`;
+    $("revQuestion").textContent = r.q;
+
+    const ban = $("revMatch");
+    if (matchball){
+      ban.textContent = (vorMe === 2 && vorOpp === 2)
+        ? "Matchball für beide — diese Runde entscheidet"
+        : vorMe === 2
+          ? "Dein Matchball — mit dieser Runde gewinnst du das Spiel"
+          : `Matchball für ${nameOf(opp)} — diese Runde kann das Spiel entscheiden`;
+      ban.classList.remove("hidden");
+    } else {
+      ban.classList.add("hidden");
+    }
+
+    buildRevealRows();
+    buildRevealRest();
+    // Der Hinweissatz nennt oft die entscheidende Zahl — beim Matchball
+    // bleibt er zurück, bis alles offen liegt.
+    $("revNote").textContent = matchball ? "" : (sol.note || "");
+    $("revDecide").classList.add("hidden");
+
+    if (matchball){
+      $("btnRevealAll").classList.remove("hidden");
+      renderRunningScore(0, false);
+      revealTimers.push(setTimeout(() => revealNext(), 900));
+    } else {
+      $("btnRevealAll").classList.add("hidden");
+      revealAll(false);
+    }
+  }
+
+  updateNextButton(iAmReady);
+  show("screen-reveal");
+}
+
+function buildRevealRows(){
+  const { sol, mine, theirs, opp, matchball } = revealCtx;
+  const cls = p => p === 10 ? "p10" : p === 5 ? "p5" : "p0";
 
   $("revList").innerHTML = sol.top.map((t, i) => {
     const mp = pointsFor(mine[i], i, sol.top);
     const op = pointsFor(theirs[i], i, sol.top);
-    const cls = p => p === 10 ? "p10" : p === 5 ? "p5" : "p0";
     const wert = sol.values?.[t];
-    return `<div class="rev">
+    return `<div class="rev ${matchball ? "pending" : ""}" data-rev="${i}">
       <div class="rk">${i+1}</div>
       <div class="grow">
-        <div class="sol">${esc(t)}</div>
-        ${wert ? `<div class="wert">${esc(wert)}</div>` : ""}
-        <div class="picks">
-          <div class="pk"><span class="who">Du</span><span class="txt">${esc(mine[i] || "—")}</span><span class="p ${cls(mp)}">+${mp}</span></div>
-          <div class="pk"><span class="who">${esc(nameOf(opp)).slice(0,7)}</span><span class="txt">${esc(theirs[i] || "—")}</span><span class="p ${cls(op)}">+${op}</span></div>
+        <div class="revhold"><span>Platz ${i+1}</span><i></i></div>
+        <div class="revfull">
+          <div class="sol">${esc(t)}</div>
+          ${wert ? `<div class="wert">${esc(wert)}</div>` : ""}
+          <div class="picks">
+            <div class="pk"><span class="who">Du</span><span class="txt">${esc(mine[i] || "—")}</span><span class="p ${cls(mp)}">+${mp}</span></div>
+            <div class="pk"><span class="who">${esc(nameOf(opp)).slice(0,7)}</span><span class="txt">${esc(theirs[i] || "—")}</span><span class="p ${cls(op)}">+${op}</span></div>
+          </div>
         </div>
       </div>
     </div>`;
   }).join("");
+}
 
-  // Die fünf Vorschläge, die nicht in die Top 5 gehörten — mit ihren
-  // Zahlen, damit man sieht, wie knapp es war.
+/* Die fünf Vorschläge, die nicht in die Top 5 gehörten — mit ihren
+   Zahlen, damit man sieht, wie knapp es war. Beim Matchball bleiben sie
+   verdeckt, bis alles aufgedeckt ist. */
+function buildRevealRest(){
+  const { sol, r, matchball } = revealCtx;
   const rest = (r.options || []).filter(o => !sol.top.some(t => norm(t) === norm(o)));
   $("revRestBox").innerHTML = rest.length
     ? rest.map(o => {
@@ -2838,11 +3011,96 @@ function renderReveal(n, sol, mine, theirs, iAmReady){
              + `<span class="wert">${esc(wert || "—")}</span></div>`;
       }).join("")
     : `<div class="empty">Keine.</div>`;
-  $("revRest").classList.toggle("hidden", !rest.length);
+  $("revRest").classList.toggle("hidden", !rest.length || matchball);
+}
 
+/* Punktestand bis einschließlich Platz k */
+function renderRunningScore(k, tick = true){
+  const { sol, mine, theirs, opp, done } = revealCtx;
+  let me_ = 0, op_ = 0;
+  for (let i = 0; i < k; i++){
+    me_ += pointsFor(mine[i], i, sol.top);
+    op_ += pointsFor(theirs[i], i, sol.top);
+  }
+  // Führung erst hervorheben, wenn alles offen liegt.
+  const meWin  = done && me_ > op_;
+  const oppWin = done && op_ > me_;
+  $("revScore").innerHTML =
+    `<div class="${meWin ? "win":""}"><div class="n${tick?" tick":""}">${me_}</div><div class="l">Du</div></div>
+     <div class="${oppWin ? "win":""}"><div class="n${tick?" tick":""}">${op_}</div><div class="l">${esc(nameOf(opp))}</div></div>`;
+}
+
+function revealNext(){
+  if (!revealCtx || revealCtx.done) return;
+  const i = revealCtx.step;
+  const row = $("revList").querySelector(`[data-rev="${i}"]`);
+  if (row){
+    row.classList.remove("pending");
+    row.classList.add("just");
+  }
+  revealCtx.step = i + 1;
+
+  const fertig = revealCtx.step >= revealCtx.sol.top.length;
+  if (fertig) revealCtx.done = true;
+  renderRunningScore(revealCtx.step);
+
+  if (fertig) finishReveal();
+  else revealTimers.push(setTimeout(revealNext, 1150));
+}
+
+function revealAll(mitTick = true){
+  clearRevealTimers();
+  if (!revealCtx) return;
+  $("revList").querySelectorAll("[data-rev]").forEach(el => el.classList.remove("pending"));
+  revealCtx.step = revealCtx.sol.top.length;
+  revealCtx.done = true;
+  renderRunningScore(revealCtx.step, mitTick);
+  finishReveal();
+}
+$("btnRevealAll").onclick = () => revealAll();
+
+/* Nach dem letzten Platz: Ablenker zeigen, Stand einordnen, Knopf frei. */
+function finishReveal(){
+  const { sol, mine, theirs, opp, matchball, vorMe, vorOpp, n } = revealCtx;
+  $("btnRevealAll").classList.add("hidden");
   $("revNote").textContent = sol.note || "";
 
+  const rest = (revealCtx.r.options || []).filter(o => !sol.top.some(t => norm(t) === norm(o)));
+  $("revRest").classList.toggle("hidden", !rest.length);
+
+  if (matchball){
+    const mp = scoreOf(mine, sol.top), op = scoreOf(theirs, sol.top);
+    const me_ = vorMe  + (mp > op ? 1 : 0);
+    const op_ = vorOpp + (op > mp ? 1 : 0);
+    const d = $("revDecide");
+    if (me_ >= 3 && op_ < 3){
+      d.textContent = "Damit steht dein Sieg fest.";
+      d.classList.remove("hidden");
+    } else if (op_ >= 3 && me_ < 3){
+      d.textContent = `Damit geht das Spiel an ${nameOf(opp)}.`;
+      d.classList.remove("hidden");
+    } else if (mp === op){
+      d.textContent = "Unentschieden — es bleibt offen.";
+      d.classList.remove("hidden");
+    } else {
+      d.textContent = "Noch nicht entschieden.";
+      d.classList.remove("hidden");
+    }
+  }
+
+  updateNextButton($("btnNextRound").dataset.ready === "1");
+}
+
+function updateNextButton(iAmReady){
   const b = $("btnNextRound");
+  const { n, opp, done } = revealCtx || {};
+  b.dataset.ready = iAmReady ? "1" : "";
+
+  if (!done){
+    b.disabled = true;
+    b.textContent = "Die Auflösung läuft …";
+    return;
+  }
   const last = n + 1 >= ROUNDS;
   if (iAmReady){
     b.disabled = true;
@@ -2851,7 +3109,6 @@ function renderReveal(n, sol, mine, theirs, iAmReady){
     b.disabled = false;
     b.textContent = last ? "Endstand ansehen" : "Weiter zu Runde " + (n + 2);
   }
-  show("screen-reveal");
 }
 
 $("btnNextRound").onclick = async () => {
@@ -2887,8 +3144,10 @@ async function showFinal(gid){
   const opp = oppUid();
 
   // Alle fünf Lösungen einsammeln — nach Spielende sind sie freigegeben.
-  const sols = [];
-  for (let i = 0; i < ROUNDS; i++) sols.push(await loadSolution(gid, i));
+  // Nebeneinander statt nacheinander: fünf Netzwege werden zu einem.
+  const sols = await Promise.all(
+    Array.from({length: ROUNDS}, (_, i) => loadSolution(gid, i))
+  );
 
   const rows = [];
   let myTotal = 0, oppTotal = 0, myRounds = 0, oppRounds = 0, perfect = 0;
@@ -2984,6 +3243,8 @@ $("btnRematch").onclick = async () => {
 };
 
 async function leaveGame(){
+  clearRevealTimers();
+  revealKey = null; revealCtx = null;
   if (unsubGame){ unsubGame(); unsubGame = null; }
   currentGameId = currentGame = null;
   sideEffectGuard = new Set();
