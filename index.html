@@ -866,6 +866,19 @@
       <button class="x" id="installX" aria-label="Hinweis ausblenden">×</button>
     </div>
 
+    <div class="install hidden" id="pushCard">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFC93C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;margin-top:2px">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.7 21a2 2 0 0 1-3.4 0"/>
+      </svg>
+      <div class="grow">
+        <div class="tt">Herausforderungen nicht verpassen</div>
+        <div class="bd" id="pushCardText">Lass dich benachrichtigen, wenn dich jemand herausfordert oder wenn du am Zug bist.</div>
+        <button class="go" id="pushCardGo">Meldungen einschalten</button>
+      </div>
+      <button class="x" id="pushCardX" aria-label="Hinweis ausblenden">×</button>
+    </div>
+
     <div class="seg" id="modeSeg">
       <button data-mode="klassik">Klassik</button>
       <button data-mode="wechsel">Abwechselnd</button>
@@ -996,6 +1009,7 @@
         </div>
         <button class="switch" id="btnPush" role="switch" aria-checked="false"><span class="knob"></span></button>
       </div>
+      <button class="btn ghost sm" id="btnPushTest" style="width:100%;margin-top:12px">Testmeldung an dieses Gerät</button>
     </div>
 
     <div class="card">
@@ -1069,6 +1083,8 @@
         <button class="btn ghost sm grow" id="btnArchReload">Neu laden</button>
         <button class="btn ghost sm grow" id="btnArchExport">Exportieren</button>
       </div>
+      <button class="btn ghost sm" id="btnArchCheck" style="width:100%;margin-top:8px">Reihenfolgen prüfen</button>
+      <p class="dim" id="archCheckStatus" style="font-size:.84rem;margin-top:10px"></p>
     </div>
 
     <div class="card">
@@ -1815,6 +1831,7 @@ function startSession(seed){
     countLoginDay();
     loadAdmins();
     pushStatusPruefen();
+    pushAuffrischen();
     renderHome();
     renderStats();
     loadFriends();
@@ -1845,6 +1862,7 @@ async function countLoginDay(){
 
 function renderHome(){
   renderInstall();
+  renderPushCard();
   renderModeSeg();
   $("homeAvaBox").innerHTML = avaHTML(meLook(), "xl");
   $("homeName").textContent = profile.username;
@@ -2217,6 +2235,43 @@ function renderInstall(){
   }
   card.classList.remove("hidden");
 }
+/* Einmaliger Hinweis auf dem Startbildschirm. Erscheint nur, solange
+   noch nie gefragt wurde — abgelehnte Erlaubnis lässt sich vom Browser
+   aus nicht erneut erfragen, dann wäre der Knopf eine Sackgasse. */
+const PUSH_KEY = "listduell_push_hidden";
+function renderPushCard(){
+  const card = $("pushCard");
+  if (!card) return;
+  const geht = "Notification" in window;
+  const schon = geht && Notification.permission === "granted"
+                && !!localStorage.getItem("listduell_push_token");
+  if (!geht || schon || localStorage.getItem(PUSH_KEY) === "1"){
+    card.classList.add("hidden");
+    return;
+  }
+  if (Notification.permission === "denied"){
+    $("pushCardText").textContent =
+      "Meldungen sind für diese Seite blockiert. Das lässt sich nur in den Einstellungen des Browsers wieder ändern.";
+    $("pushCardGo").classList.add("hidden");
+  } else {
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+    $("pushCardText").textContent = (ios && !standalone)
+      ? "Auf dem iPhone gibt es Meldungen erst, wenn die App auf dem Home-Bildschirm liegt. Danach hier einschalten."
+      : "Lass dich benachrichtigen, wenn dich jemand herausfordert oder wenn du am Zug bist.";
+    $("pushCardGo").classList.toggle("hidden", ios && !standalone);
+  }
+  card.classList.remove("hidden");
+}
+$("pushCardGo").onclick = async () => {
+  await pushAnschalten();
+  renderPushCard();
+};
+$("pushCardX").onclick = () => {
+  localStorage.setItem(PUSH_KEY, "1");
+  $("pushCard").classList.add("hidden");
+};
+
 $("installGo").onclick = async () => {
   if (!installEvent) return;
   installEvent.prompt();
@@ -2268,6 +2323,7 @@ async function pushAnschalten(){
     toast("Meldungen sind an.");
   } catch(e){ toast("Push fehlgeschlagen: " + (e.message || e)); }
   renderPushSwitch();
+  renderPushCard();
 }
 async function pushAusschalten(){
   const tok = localStorage.getItem("listduell_push_token");
@@ -2282,17 +2338,64 @@ $("btnPush").onclick = () => {
   const on = Notification.permission === "granted" && !!localStorage.getItem("listduell_push_token");
   on ? pushAusschalten() : pushAnschalten();
 };
+$("btnPushTest").onclick = async () => {
+  const b = $("btnPushTest");
+  if (Notification.permission !== "granted" || !localStorage.getItem("listduell_push_token")){
+    toast("Schalte die Meldungen zuerst ein.");
+    return;
+  }
+  b.disabled = true; b.textContent = "Wird gesendet …";
+  const d = await push(me.uid, "test");
+  if (d?.error) toast("Fehler: " + d.error);
+  else if (d?.sent) toast(`An ${d.sent} Gerät${d.sent === 1 ? "" : "e"} verschickt.`);
+  else toast("Kein Gerät registriert — Schalter aus und wieder an.");
+  b.disabled = false; b.textContent = "Testmeldung an dieses Gerät";
+};
+
 function pushStatusPruefen(){ renderPushSwitch(); }
+
+/* Ein Gerätetoken kann von Firebase ausgetauscht werden. Wer die Erlaubnis
+   schon erteilt hat, bekommt ihn beim Start still erneuert — sonst zeigt
+   der Schalter „an", während die Meldungen ins Leere gehen. */
+let pushAufgefrischt = false;
+async function pushAuffrischen(){
+  if (pushAufgefrischt || !me) return;
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  pushAufgefrischt = true;
+  try {
+    const m = await initPush();
+    if (!m) return;
+    const reg = await navigator.serviceWorker.ready;
+    const token = await getToken(m, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    if (!token) return;
+    const bekannt = profile?.pushTokens || [];
+    if (localStorage.getItem("listduell_push_token") !== token || !bekannt.includes(token)){
+      await updateDoc(userRef(me.uid), { pushTokens: arrayUnion(token) });
+      localStorage.setItem("listduell_push_token", token);
+    }
+  } catch(e){
+    console.warn("Token-Auffrischung fehlgeschlagen:", e.message || e);
+  }
+  renderPushSwitch();
+}
 
 async function push(to, kind, extra = {}){
   try {
     const idToken = await me.getIdToken();
-    await fetch("/api/notify", {
+    const r = await fetch("/api/notify", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ idToken, to, kind, ...extra })
     });
-  } catch(_){}
+    const d = await r.json().catch(() => ({}));
+    // Stilles Scheitern ist die häufigste Ursache für „es kommt nichts an".
+    if (!r.ok || d.error) console.warn("Push fehlgeschlagen:", kind, d.error || r.status);
+    else if (d.sent === 0) console.info("Push:", kind, "— kein Gerät registriert");
+    return d;
+  } catch(e){
+    console.warn("Push nicht erreichbar:", e.message || e);
+    return null;
+  }
 }
 
 navigator.serviceWorker?.addEventListener?.("message", e => {
@@ -2551,6 +2654,9 @@ async function challenge(oppUid, config = null){
     });
     await updateDoc(userRef(me.uid), { [ACTIVE]: ref.id });
     push(oppUid, "listchallenge");
+    if (!(opp.pushTokens || []).length){
+      toast(`${opp.username} hat Meldungen nicht eingeschaltet — sieht die Herausforderung beim nächsten Öffnen.`);
+    }
     $("waitTitle").textContent = "Herausforderung verschickt";
     $("waitText").textContent = `Warte auf ${opp.username} …`;
     show("screen-waiting");
@@ -2782,25 +2888,135 @@ async function rememberQuestions(gid, questions){
 }
 
 /* ---------- Prüfung ---------- */
+/* Eine Runde, deren Werte keine Reihenfolge zulassen, ist unbrauchbar —
+   dann stimmt die Punktevergabe nicht. */
+function ordnungOk(r){
+  const values = r.values || {};
+  return checkOrder({ top:r.top, decoys:r.decoys, values, order:r.order }).status !== "widerspruch";
+}
+
 function sane(r){
   if (!r || typeof r.q !== "string" || !r.q.trim()) return false;
   if (!Array.isArray(r.top) || r.top.length !== 5) return false;
   if (!Array.isArray(r.decoys) || r.decoys.length !== 5) return false;
   const alle = [...r.top, ...r.decoys].map(x => String(x).toLowerCase().trim());
   if (alle.some(x => !x)) return false;
-  return new Set(alle).size === 10;
+  if (new Set(alle).size !== 10) return false;
+  return ordnungOk(r);
+}
+
+/* Wandelt einen angezeigten Wert in eine Zahl um. Deutsche Schreibweise:
+   Punkt trennt Tausender, Komma ist das Dezimalzeichen. Größenwörter
+   werden mitgelesen: „3,88 Mio." → 3880000. */
+function parseWert(roh){
+  if (roh == null) return null;
+  const s = String(roh).toLowerCase().trim();
+  if (!s) return null;
+
+  let faktor = 1;
+  if (/mrd|milliarde/.test(s)) faktor = 1e9;
+  else if (/mio|million/.test(s)) faktor = 1e6;
+  else if (/tsd|tausend/.test(s)) faktor = 1e3;
+
+  const treffer = s.match(/-?\d[\d.,]*/);
+  if (!treffer) return null;
+  let z = treffer[0].replace(/[.,]$/, "");
+
+  if (z.includes(",")){
+    z = z.replace(/\./g, "").replace(",", ".");      // Komma → Dezimalzeichen
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(z) || (z.match(/\./g) || []).length > 1){
+    z = z.replace(/\./g, "");                        // Punkte → Tausendertrenner
+  }
+
+  const n = parseFloat(z);
+  return Number.isFinite(n) ? n * faktor : null;
+}
+
+/* Prüft, ob die Reihenfolge in "top" zu den Zahlenwerten passt.
+
+   { status, top, warnung }
+     "ok"          — stimmt bereits
+     "repariert"   — top nach den Werten neu sortiert
+     "unpruefbar"  — nicht alle Werte lesbar
+     "widerspruch" — Werte lassen keine Reihenfolge zu; unbrauchbar
+
+   Die Richtung kommt zuerst aus dem Feld "order". Fehlt es, verraten sie
+   die Ablenker: die liegen jenseits von Platz fünf, also entweder fast
+   alle unter dem kleinsten Wert der Top 5 (absteigend) oder über dem
+   größten (aufsteigend). Als letztes zählt, wie top selbst sortiert ist.
+
+   Ein einzelner Ablenker mit unpassendem Wert wirft die Runde nicht weg —
+   er kann aus einer anderen Kategorie stammen (etwa eine ausländische
+   Stadt bei einer Frage nach deutschen). Das wird nur vermerkt. */
+function checkOrder(r){
+  const top = r.top || [];
+  const decoys = r.decoys || [];
+  const werte = r.values || {};
+
+  const tv = top.map(n => parseWert(werte[n]));
+  if (tv.some(v => v == null)) return { status:"unpruefbar", top, warnung:null };
+
+  const dv = decoys.map(n => parseWert(werte[n])).filter(v => v != null);
+  const min = Math.min(...tv), max = Math.max(...tv);
+
+  let richtung = null;
+  const angabe = String(r.order || "").toLowerCase();
+  if (angabe.startsWith("ab")) richtung = "desc";
+  else if (angabe.startsWith("auf")) richtung = "asc";
+
+  // Mehrheitsentscheid der Ablenker — ein Ausreißer darf nicht kippen.
+  if (!richtung && dv.length >= 3){
+    const drunter = dv.filter(v => v <= min).length;
+    const drueber = dv.filter(v => v >= max).length;
+    if (drunter > drueber && drunter >= dv.length - 1) richtung = "desc";
+    else if (drueber > drunter && drueber >= dv.length - 1) richtung = "asc";
+  }
+
+  // Zuletzt: wie ist top selbst sortiert?
+  const faellt = tv.every((v, i) => i === 0 || tv[i-1] >= v);
+  const steigt = tv.every((v, i) => i === 0 || tv[i-1] <= v);
+  if (!richtung){
+    if (faellt && !steigt) richtung = "desc";
+    else if (steigt && !faellt) richtung = "asc";
+    else if (faellt && steigt) richtung = "desc";   // alle Werte gleich
+    else return { status:"widerspruch", top, warnung:"Werte ergeben keine Reihenfolge" };
+  }
+
+  const ausreisser = richtung === "desc"
+    ? dv.filter(v => v > min).length
+    : dv.filter(v => v < max).length;
+  const warnung = ausreisser
+    ? `${ausreisser} Ablenker ${ausreisser === 1 ? "liegt" : "liegen"} im Bereich der Top 5`
+    : null;
+
+  const paare = top.map((n, i) => ({ n, v: tv[i] }));
+  paare.sort((a, b) => richtung === "desc" ? b.v - a.v : a.v - b.v);
+  const neu = paare.map(p => p.n);
+  const gleich = neu.every((n, i) => n === top[i]);
+  return { status: gleich ? "ok" : "repariert", top: neu, warnung };
 }
 
 /* Fehlt zu einem Vorschlag der Zahlenwert, bleibt das Feld leer —
-   die Runde ist deswegen nicht unbrauchbar. */
+   die Runde ist deswegen nicht unbrauchbar. Passt die Reihenfolge nicht
+   zu den Werten, wird sie hier stillschweigend geradegezogen: die Zahlen
+   sind verlässlicher als die Reihenfolge, in der das Modell sie ausgibt. */
 function withValues(r){
   const values = {};
   for (const name of [...r.top, ...r.decoys]){
     const v = r.values?.[name];
     if (v != null && String(v).trim()) values[name] = String(v).trim();
   }
-  return { q:r.q.trim(), unit:String(r.unit||"").trim(), top:r.top.slice(),
-           decoys:r.decoys.slice(), values, note:String(r.note||"").trim() };
+  const geprueft = checkOrder({ top:r.top, decoys:r.decoys, values, order:r.order });
+  return {
+    q: r.q.trim(),
+    unit: String(r.unit || "").trim(),
+    top: geprueft.status === "widerspruch" ? r.top.slice() : geprueft.top.slice(),
+    decoys: r.decoys.slice(),
+    values,
+    order: r.order || "",
+    note: String(r.note || "").trim(),
+    pruefung: geprueft.status
+  };
 }
 
 /* ---------- Quelle 1: Archiv ---------- */
@@ -2861,6 +3077,7 @@ async function roundsFromApi(avoid, config, wanted){
         top: (x.top || []).map(s => String(s).trim()),
         decoys: (x.decoys || []).map(s => String(s).trim()),
         values: x.values || {},
+        order: String(x.order || ""),
         note: String(x.note || "")
       }))
       .filter(sane)
@@ -2882,6 +3099,7 @@ function archiveRounds(rounds, config){
       top: r.top,
       decoys: r.decoys,
       values: r.values,
+      order: r.order || "",
       note: r.note,
       category: config?.category || null,
       difficulty: config?.difficulty ?? 2,
@@ -3982,6 +4200,51 @@ function renderArchive(){
   });
 }
 $("archSearch").addEventListener("input", renderArchive);
+
+/* Prüft das gesamte Archiv gegen die Zahlenwerte. Falsch sortierte
+   Einträge werden geradegezogen, unbrauchbare nur gemeldet — gelöscht
+   wird nichts ohne Zutun. */
+$("btnArchCheck").onclick = async () => {
+  const btn = $("btnArchCheck");
+  btn.disabled = true; btn.textContent = "Wird geprüft …";
+  const stat = $("archCheckStatus");
+
+  let ok = 0, repariert = 0, kaputt = 0, blind = 0;
+  const auffaellig = [];
+
+  try {
+    for (const r of archCache){
+      const erg = checkOrder({ top:r.top, decoys:r.decoys, values:r.values, order:r.order });
+
+      if (erg.status === "unpruefbar"){ blind++; continue; }
+      if (erg.status === "widerspruch"){ kaputt++; auffaellig.push(r.q); continue; }
+      if (erg.warnung) auffaellig.push(r.q + " — " + erg.warnung);
+
+      if (erg.status === "repariert"){
+        await setDoc(doc(db, ARCHIVE, r.id), { top: erg.top, geprueft: serverTimestamp() }, { merge: true });
+        r.top = erg.top;
+        repariert++;
+      } else ok++;
+    }
+
+    stat.innerHTML =
+      `<strong>${archCache.length} geprüft</strong> · ${ok} in Ordnung · `
+    + `<span style="color:var(--yellow)">${repariert} sortiert</span> · `
+    + `<span style="color:var(--magenta)">${kaputt} unbrauchbar</span>`
+    + (blind ? ` · ${blind} ohne Zahlenwerte` : "")
+    + (auffaellig.length
+        ? `<br><span class="dim">Zum Nachsehen: ${auffaellig.slice(0,6).map(esc).join(" · ")}`
+          + (auffaellig.length > 6 ? ` … und ${auffaellig.length - 6} weitere` : "") + `</span>`
+        : "");
+
+    if (repariert) renderArchive();
+    toast(repariert ? `${repariert} Reihenfolgen berichtigt.` : "Alles in Ordnung.");
+  } catch(e){
+    stat.textContent = "Fehler: " + (e.code || e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Reihenfolgen prüfen";
+  }
+};
 
 $("btnArchExport").onclick = () => {
   const data = archCache.map(r => ({
