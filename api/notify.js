@@ -46,6 +46,14 @@ function baueNachricht(kind, from, extra = {}) {
     case "listdone":
       return { title: "Spiel beendet", body: `Das Spiel gegen ${from} ist durch. Schau dir den Endstand an.`, tag: "listgame" };
 
+    /* ---------- Selbsttest ---------- */
+    case "test":
+      return {
+        title: "Alles angekommen",
+        body: "Meldungen aus List Duell erreichen dieses Gerät.",
+        tag: "test"
+      };
+
     default:
       return null;
   }
@@ -63,7 +71,11 @@ export default async function handler(req, res) {
     // Absender beweisen — sonst könnte jeder beliebige Meldungen verschicken.
     const decoded = await a.auth().verifyIdToken(idToken);
     const senderUid = decoded.uid;
-    if (senderUid === to) return res.status(200).json({ skipped: "an sich selbst" });
+    // An sich selbst nur zum Ausprobieren — sonst könnte man sich
+    // Meldungen im Namen anderer zuschicken lassen.
+    if (senderUid === to && kind !== "test"){
+      return res.status(200).json({ skipped: "an sich selbst" });
+    }
 
     const db = a.firestore();
     const [senderSnap, zielSnap] = await Promise.all([

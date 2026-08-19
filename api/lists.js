@@ -33,6 +33,98 @@ const STUFEN = {
 
 const norm = s => String(s || "").toLowerCase().trim();
 
+/* Wandelt einen angezeigten Wert in eine Zahl um. Deutsche Schreibweise:
+   Punkt trennt Tausender, Komma ist das Dezimalzeichen. Größenwörter
+   werden mitgelesen: „3,88 Mio." → 3880000. */
+function parseWert(roh){
+  if (roh == null) return null;
+  const s = String(roh).toLowerCase().trim();
+  if (!s) return null;
+
+  let faktor = 1;
+  if (/mrd|milliarde/.test(s)) faktor = 1e9;
+  else if (/mio|million/.test(s)) faktor = 1e6;
+  else if (/tsd|tausend/.test(s)) faktor = 1e3;
+
+  const treffer = s.match(/-?\d[\d.,]*/);
+  if (!treffer) return null;
+  let z = treffer[0].replace(/[.,]$/, "");
+
+  if (z.includes(",")){
+    z = z.replace(/\./g, "").replace(",", ".");      // Komma → Dezimalzeichen
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(z) || (z.match(/\./g) || []).length > 1){
+    z = z.replace(/\./g, "");                        // Punkte → Tausendertrenner
+  }
+
+  const n = parseFloat(z);
+  return Number.isFinite(n) ? n * faktor : null;
+}
+
+/* Prüft, ob die Reihenfolge in "top" zu den Zahlenwerten passt.
+
+   { status, top, warnung }
+     "ok"          — stimmt bereits
+     "repariert"   — top nach den Werten neu sortiert
+     "unpruefbar"  — nicht alle Werte lesbar
+     "widerspruch" — Werte lassen keine Reihenfolge zu; unbrauchbar
+
+   Die Richtung kommt zuerst aus dem Feld "order". Fehlt es, verraten sie
+   die Ablenker: die liegen jenseits von Platz fünf, also entweder fast
+   alle unter dem kleinsten Wert der Top 5 (absteigend) oder über dem
+   größten (aufsteigend). Als letztes zählt, wie top selbst sortiert ist.
+
+   Ein einzelner Ablenker mit unpassendem Wert wirft die Runde nicht weg —
+   er kann aus einer anderen Kategorie stammen (etwa eine ausländische
+   Stadt bei einer Frage nach deutschen). Das wird nur vermerkt. */
+function checkOrder(r){
+  const top = r.top || [];
+  const decoys = r.decoys || [];
+  const werte = r.values || {};
+
+  const tv = top.map(n => parseWert(werte[n]));
+  if (tv.some(v => v == null)) return { status:"unpruefbar", top, warnung:null };
+
+  const dv = decoys.map(n => parseWert(werte[n])).filter(v => v != null);
+  const min = Math.min(...tv), max = Math.max(...tv);
+
+  let richtung = null;
+  const angabe = String(r.order || "").toLowerCase();
+  if (angabe.startsWith("ab")) richtung = "desc";
+  else if (angabe.startsWith("auf")) richtung = "asc";
+
+  // Mehrheitsentscheid der Ablenker — ein Ausreißer darf nicht kippen.
+  if (!richtung && dv.length >= 3){
+    const drunter = dv.filter(v => v <= min).length;
+    const drueber = dv.filter(v => v >= max).length;
+    if (drunter > drueber && drunter >= dv.length - 1) richtung = "desc";
+    else if (drueber > drunter && drueber >= dv.length - 1) richtung = "asc";
+  }
+
+  // Zuletzt: wie ist top selbst sortiert?
+  const faellt = tv.every((v, i) => i === 0 || tv[i-1] >= v);
+  const steigt = tv.every((v, i) => i === 0 || tv[i-1] <= v);
+  if (!richtung){
+    if (faellt && !steigt) richtung = "desc";
+    else if (steigt && !faellt) richtung = "asc";
+    else if (faellt && steigt) richtung = "desc";   // alle Werte gleich
+    else return { status:"widerspruch", top, warnung:"Werte ergeben keine Reihenfolge" };
+  }
+
+  const ausreisser = richtung === "desc"
+    ? dv.filter(v => v > min).length
+    : dv.filter(v => v < max).length;
+  const warnung = ausreisser
+    ? `${ausreisser} Ablenker ${ausreisser === 1 ? "liegt" : "liegen"} im Bereich der Top 5`
+    : null;
+
+  const paare = top.map((n, i) => ({ n, v: tv[i] }));
+  paare.sort((a, b) => richtung === "desc" ? b.v - a.v : a.v - b.v);
+  const neu = paare.map(p => p.n);
+  const gleich = neu.every((n, i) => n === top[i]);
+  return { status: gleich ? "ok" : "repariert", top: neu, warnung };
+}
+
+
 function baueAufgabe(count, thema, stufe, avoid) {
   const s = STUFEN[stufe] || STUFEN[2];
   const sperre = avoid.length
@@ -52,6 +144,7 @@ Für jede Frage brauchst du:
 - "top": genau fünf Einträge in der KORREKTEN Reihenfolge, Platz 1 zuerst.
 - "decoys": genau fünf plausible Einträge, die sicher NICHT in die Top 5 gehören.
 - "values": zu JEDEM der zehn Einträge der Zahlenwert, nach dem sortiert wird — auch zu den Ablenkern. Schlüssel ist der Eintrag, exakt so geschrieben wie in "top" bzw. "decoys".
+- "order": "absteigend", wenn auf Platz 1 der GRÖSSTE Wert steht (die höchsten, größten, meisten …), sonst "aufsteigend" (die kleinsten, kürzesten, nächstgelegenen …).
 - "note": ein kurzer deutscher Satz mit dem entscheidenden Detail. Keine bloße Wiederholung der Zahlen.
 
 Zu den Zahlenwerten:
@@ -59,6 +152,7 @@ Zu den Zahlenwerten:
 - Kurz halten, mit Einheit, höchstens zwölf Zeichen. Große Zahlen runden: „1,43 Mrd.“ statt „1.428.627.663“.
 - Alle zehn Werte in derselben Einheit und derselben Größenordnung, damit sie vergleichbar sind.
 - Die Werte müssen die Reihenfolge in "top" tatsächlich belegen und für die Ablenker klar außerhalb liegen.
+- WICHTIG: Geh "top" vor dem Antworten noch einmal von Platz 1 bis 5 durch und vergleiche die Werte miteinander. Bei "absteigend" muss jeder Wert kleiner oder gleich dem davor sein, bei "aufsteigend" größer oder gleich. Stimmt das nicht, sortiere um, bevor du antwortest — eine vertauschte Reihenfolge macht die ganze Frage unbrauchbar.
 
 Unbedingt beachten:
 - Die Reihenfolge muss objektiv feststehen und gut belegt sein. Keine Geschmacksfragen, keine Umfragen, keine "beliebtesten" oder "besten".
@@ -69,7 +163,7 @@ Unbedingt beachten:
 - Die ${count} Fragen unterscheiden sich deutlich voneinander.${sperre}
 
 Antworte ausschließlich mit JSON, ohne Markdown, ohne Erklärung:
-{"rounds":[{"q":"...","unit":"...","top":["...","...","...","...","..."],"decoys":["...","...","...","...","..."],"values":{"Eintrag":"Wert"},"note":"..."}]}`;
+{"rounds":[{"q":"...","unit":"...","order":"absteigend","top":["...","...","...","...","..."],"decoys":["...","...","...","...","..."],"values":{"Eintrag":"Wert"},"note":"..."}]}`;
 }
 
 function pruefe(r) {
@@ -90,13 +184,21 @@ function pruefe(r) {
     if (v != null && String(v).trim()) values[name] = String(v).trim().slice(0, 24);
   }
 
+  // Reihenfolge gegen die Zahlen halten. Das Modell verdreht die Plätze
+  // deutlich häufiger, als es sich bei den Werten selbst irrt — deshalb
+  // entscheiden im Zweifel die Werte.
+  const geprueft = checkOrder({ top, decoys, values, order: r.order });
+  if (geprueft.status === "widerspruch") return null;
+
   return {
     q: r.q.trim(),
     unit: String(r.unit || "").trim(),
-    top,
+    order: String(r.order || "").trim(),
+    top: geprueft.top,
     decoys,
     values,
-    note: String(r.note || "").trim()
+    note: String(r.note || "").trim(),
+    pruefung: geprueft.status
   };
 }
 
