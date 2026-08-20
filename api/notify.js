@@ -36,15 +36,11 @@ function baueNachricht(kind, from, extra = {}) {
     case "finished":
       return { title: "Runde beendet", body: `${from} hat getippt. Schau dir das Ergebnis an.`, tag: "game" };
 
-    /* ---------- List Duell ---------- */
+    /* ---------- List Duell ----------
+       Bewusst nur die Herausforderung. Meldungen zu jedem Zug und jedem
+       Spielende waren mehr Störung als Nutzen. */
     case "listchallenge":
-      return { title: "Herausforderung", body: `${from} fordert dich zu fünf Runden heraus.`, tag: "listchallenge" };
-    case "listaccepted":
-      return { title: "Es geht los", body: `${from} hat angenommen. Runde 1 wartet.`, tag: "listgame" };
-    case "listturn":
-      return { title: "Liste abgegeben", body: `${from} ist fertig. Jetzt bist du dran.`, tag: "listgame" };
-    case "listdone":
-      return { title: "Spiel beendet", body: `Das Spiel gegen ${from} ist durch. Schau dir den Endstand an.`, tag: "listgame" };
+      return { title: "Herausforderung", body: `${from} fordert dich heraus.`, tag: "listchallenge" };
 
     /* ---------- Selbsttest ---------- */
     case "test":
