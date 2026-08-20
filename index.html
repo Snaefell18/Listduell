@@ -3742,9 +3742,7 @@ setInterval(() => {
 async function enterActive(gid){
   const g = currentGame;
   if (modeOf(g) === "wechsel"){ await enterActiveAlt(gid); return; }
-  const gen = spielGen;
   const n = g.round ?? 0;
-  const veraltet = () => gen !== spielGen || currentGameId !== gid || (currentGame?.round ?? 0) !== n;
   const key = rid(n);
   const opp = oppUid();
   const answers = g.answers?.[key] || {};
@@ -3770,39 +3768,41 @@ async function enterActive(gid){
     renderRound(n, true);
     $("rndTurn").textContent = "Beide fertig — Auflösung wird geholt …";
     sol = await loadSolution(gid, n);
-    if (veraltet()) return;
   }
   if (!sol){
-    toast("Die Auflösung ließ sich nicht laden. Ich versuche es weiter …");
     setTimeout(() => refreshGame(true), 1500);
     return;
   }
+  // Nur ein echter Rundenwechsel bricht ab. Der Generationszähler darf
+  // hier NICHT mehr entscheiden: Ein eigener Schreibvorgang lässt ihn
+  // weiterspringen, und der Durchlauf hätte sich selbst für veraltet
+  // erklärt — genau daran blieb das Spiel nach dem Abgeben stehen.
+  if (currentGameId !== gid || (currentGame?.round ?? 0) !== n) return;
 
-  // Eigenes Ergebnis einmalig festhalten, damit der Endstand für
-  // beide Seiten aus denselben Zahlen entsteht.
-  const myScore = scoreOf(mine, sol.top);
-  if (g.scores?.[key]?.[me.uid] === undefined && darfWieder("score:" + gid + ":" + n)){
-    try { await updateDoc(gameRefOf(gid), { [`scores.${key}.${me.uid}`]: myScore }); }
-    catch(e){ console.warn("Punkte nicht gespeichert, wird erneut versucht:", e.code || e); }
-    if (veraltet()) return;
-  }
-
-  const ready = g.ready?.[key] || {};
+  /* Ab hier wird zuerst gezeichnet und erst danach geschrieben. Kein
+     Schreibvorgang steht mehr zwischen „beide fertig" und der sichtbaren
+     Auflösung. */
+  const frisch = currentGame || g;
+  const ready = frisch.ready?.[key] || {};
   setWarten(!!ready[me.uid] && !ready[opp]);
   draft = mine.slice(); draftRound = n;
   renderRound(n, true);
   renderReveal(n, sol, mine, theirs, ready[me.uid]);
 
+  // Eigenes Ergebnis festhalten — nebenbei, ohne den Bildschirm aufzuhalten.
+  const myScore = scoreOf(mine, sol.top);
+  if (frisch.scores?.[key]?.[me.uid] === undefined && darfWieder("score:" + gid + ":" + n)){
+    updateDoc(gameRefOf(gid), { [`scores.${key}.${me.uid}`]: myScore })
+      .catch(e => console.warn("Punkte nicht gespeichert, wird erneut versucht:", e.code || e));
+  }
+
+  // Weiterschalten ebenfalls nebenbei.
   if (ready[me.uid] && ready[opp] && darfWieder("adv:" + gid + ":" + n)){
-    try {
-      if (n + 1 < roundCount()){
-        await updateDoc(gameRefOf(gid), { round: n + 1 });
-      } else {
-        await updateDoc(gameRefOf(gid), { status: "finished", finishedAt: serverTimestamp() });
-      }
-    } catch(e){
-      console.warn("Runde nicht weitergeschaltet, wird erneut versucht:", e.code || e);
-    }
+    const weiter = n + 1 < roundCount()
+      ? { round: n + 1 }
+      : { status: "finished", finishedAt: serverTimestamp() };
+    updateDoc(gameRefOf(gid), weiter)
+      .catch(e => console.warn("Runde nicht weitergeschaltet, wird erneut versucht:", e.code || e));
   }
 }
 
@@ -5190,12 +5190,12 @@ const boardVoll = (g, n) => boardOf(g, n).every(Boolean);
 /* ---------- Einstieg aus dem Spielverlauf ---------- */
 async function enterActiveAlt(gid){
   const g = currentGame;
-  const gen = spielGen;
   const n = g.round ?? 0;
   if (altRound !== n) altBusy = false;   // Rundenwechsel hebt jede Sperre auf
 
   const sol = await loadSolution(gid, n);
-  if (gen !== spielGen || currentGameId !== gid || (currentGame?.round ?? 0) !== n) return;
+  // Nur ein echter Rundenwechsel bricht ab — nicht der Generationszähler.
+  if (currentGameId !== gid || (currentGame?.round ?? 0) !== n) return;
   altSolCache = sol;
   if (!sol){
     toast("Die Runde ließ sich nicht laden. Ich versuche es weiter …");
@@ -5209,18 +5209,12 @@ async function enterActiveAlt(gid){
     const opp = oppUid();
     setWarten(!!ready[me.uid] && !ready[opp]);
     if (ready[me.uid] && ready[opp] && darfWieder("adv:" + gid + ":" + n)){
-      try {
-        if (n + 1 < roundCount()){
-          await updateDoc(gameRefOf(gid), {
-            round: n + 1,
-            turn: starterOf(g, n + 1)
-          });
-        } else {
-          await updateDoc(gameRefOf(gid), { status: "finished", finishedAt: serverTimestamp() });
-          }
-      } catch(e){
-        console.warn("Runde nicht weitergeschaltet, wird erneut versucht:", e.code || e);
-      }
+      // Nebenbei schreiben, nie darauf warten.
+      const weiter = n + 1 < roundCount()
+        ? { round: n + 1, turn: starterOf(g, n + 1) }
+        : { status: "finished", finishedAt: serverTimestamp() };
+      updateDoc(gameRefOf(gid), weiter)
+        .catch(e => console.warn("Runde nicht weitergeschaltet, wird erneut versucht:", e.code || e));
     }
     return;
   }
