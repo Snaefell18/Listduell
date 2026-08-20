@@ -3395,10 +3395,29 @@ function watchGame(gid){
    einem await feststellt, dass inzwischen ein neuerer Stand da ist, bricht
    ab — sonst zeichnet er mit veralteter Rundennummer über das Aktuelle.
    Genau daran lag es, dass in Runde 2 die Auflösung von Runde 1 erschien. */
+let letzteRunde = null;
+let letztesSpiel = null;
 async function handleGame(gid, daten){
   const gen = ++spielGen;
   lastSnapAt = Date.now();
   currentGame = daten;
+
+  /* Wechselt die Runde oder das Spiel, wird der Auflösungszustand
+     zurückgesetzt. Das ist die eine Stelle, an der das verlässlich
+     passiert — vorher hing es daran, dass ein bestimmter Zweig in
+     enterActive durchlaufen wurde, und blieb sonst auf der alten Runde
+     stehen. */
+  const runde = daten.round ?? 0;
+  if (letztesSpiel !== gid || letzteRunde !== runde){
+    letztesSpiel = gid;
+    letzteRunde = runde;
+    clearRevealTimers();
+    revealKey = null;
+    revealCtx = null;
+    altSeen = 0;
+    altBusy = false;
+    alleSheetsZu();
+  }
   const s = currentGame.status;
 
   if (s === "pending"){
@@ -3715,8 +3734,10 @@ function renderReveal(n, sol, mine, theirs, iAmReady){
   const key = currentGameId + ":" + rid(n);
 
   // Nur einmal pro Runde aufbauen — sonst würde jeder Schnappschuss vom
-  // Gegner die Animation von vorn beginnen lassen.
-  if (revealKey !== key){
+  // Gegner die Animation von vorn beginnen lassen. Die Rundennummer im
+  // Zustand wird mitgeprüft: Stimmt sie nicht, gehören die Zeilen im
+  // Bildschirm zu einer anderen Runde und müssen neu gebaut werden.
+  if (revealKey !== key || revealCtx?.n !== n){
     clearRevealTimers();
     revealKey = key;
 
