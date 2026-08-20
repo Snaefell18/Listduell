@@ -5,7 +5,7 @@
    Es wird bewusst nichts zwischengespeichert — die App soll immer
    die aktuelle Version vom Server laden. */
 
-const VERSION = "listduell-sw-1";
+const VERSION = "listduell-sw-2";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
@@ -21,27 +21,29 @@ self.addEventListener("push", event => {
 
   const title = payload.title || "List Duell";
   const body  = payload.body  || "";
-  const tag   = payload.tag   || "rangliste";
+  const tag   = payload.tag   || "listduell";
   const url   = payload.url   || "/";
 
   event.waitUntil((async () => {
     const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     const sichtbar = clients.some(c => c.visibilityState === "visible");
 
-    if (sichtbar){
-      // App liegt vorn: kein Banner, stattdessen ein Hinweis in der Oberfläche.
-      clients.forEach(c => c.postMessage({ type: "push", title, body, tag, url }));
-      return;
-    }
+    // Liegt die App vorn, zusätzlich einen Hinweis in der Oberfläche zeigen.
+    if (sichtbar) clients.forEach(c => c.postMessage({ type: "push", title, body, tag, url }));
 
+    /* Die Meldung wird IMMER angelegt. Safari auf iOS verlangt, dass jedes
+       Push-Ereignis in einer Benachrichtigung endet — wer das überspringt,
+       riskiert, dass das Abo stillschweigend gekündigt wird. Liegt die App
+       vorn, kommt sie lautlos. */
     await self.registration.showNotification(title, {
       body,
       tag,
-      renotify: true,
+      renotify: !sichtbar,
+      silent: sichtbar,
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
       data: { url },
-      vibrate: [60, 40, 60]
+      vibrate: sichtbar ? undefined : [60, 40, 60]
     });
   })());
 });
