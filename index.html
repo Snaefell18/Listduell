@@ -3733,6 +3733,24 @@ function setWarten(an){
 
 setInterval(() => {
   if (!currentGameId || document.hidden) return;
+
+  /* Aufsicht gegen die eine Sackgasse, die zählt: Beide haben abgegeben,
+     das Brett steht gesperrt da — aber kein Blatt ist offen. Dann fehlt
+     jeder Weg nach vorn. Passiert das, wird der Stand sofort neu
+     verarbeitet, statt bis zum nächsten Takt zu warten. */
+  const g = currentGame;
+  if (g && g.status === "active" && modeOf(g) === "klassik"){
+    const n = g.round ?? 0;
+    const a = g.answers?.[rid(n)] || {};
+    const beide = a[me.uid] && a[g.players.find(p => p !== me.uid)];
+    const offen = sheetOffen("sheet-reveal") || sheetOffen("sheet-altdone");
+    if (beide && !offen){
+      console.warn("Beide fertig, aber keine Auflösung sichtbar — wird nachgeholt.");
+      refreshGame(true);
+      return;
+    }
+  }
+
   const grenze = wartetAufGegner ? 4000 : 20000;
   if (Date.now() - lastSnapAt < grenze) return;
   lastSnapAt = Date.now();
@@ -3770,6 +3788,9 @@ async function enterActive(gid){
     sol = await loadSolution(gid, n);
   }
   if (!sol){
+    // Niemals stumm zurückkehren: Sonst steht das gesperrte Brett da und
+    // beide sitzen fest, ohne zu wissen, worauf sie warten.
+    zeigeLadefehler(n);
     setTimeout(() => refreshGame(true), 1500);
     return;
   }
@@ -3816,6 +3837,7 @@ async function loadSolution(gid, n){
      kurze Abstände statt der trägen Standardschleife. */
   const ref = doc(db, GAMES, gid, "secrets", rid(n));
   const pausen = [0, 120, 200, 320, 500, 800, 1200, 1800];
+  let letzterFehler = null;
   for (const ms of pausen){
     if (ms) await sleep(ms);
     try {
@@ -3825,8 +3847,10 @@ async function loadSolution(gid, n){
         solutionCache.set(ck, d);
         return d;
       }
-    } catch(_){}
+      letzterFehler = "Dokument secrets/" + rid(n) + " existiert nicht";
+    } catch(e){ letzterFehler = e.code || e.message || String(e); }
   }
+  console.warn(`Lösung für Runde ${n+1} nicht lesbar:`, letzterFehler);
   return null;
 }
 
@@ -4036,7 +4060,44 @@ function renderReveal(n, sol, mine, theirs, iAmReady){
   $("revGold").textContent = (mp > op ? "+4" : "+0") + " Gold";
   if (revealCtx?.done){ $("revMe").textContent = mp; $("revOpp").textContent = op; }
 
+  ladefehlerFuer = null;
+  $("btnNextRound").classList.remove("hidden");
   updateNextButton(iAmReady);
+  openSheet("sheet-reveal");
+}
+
+/* Wenn die Lösung nicht kommt: Statt eines gesperrten Bretts ein Blatt,
+   das sagt, was los ist, und einen Knopf, der es erneut versucht. Ohne das
+   gab es einen Zustand, aus dem nur noch „Spiel abbrechen" herausführte. */
+let ladefehlerFuer = null;
+function zeigeLadefehler(n){
+  if (ladefehlerFuer === n && sheetOffen("sheet-reveal")) return;
+  ladefehlerFuer = n;
+
+  $("revLabel").textContent = `Runde ${zz(n+1)}`;
+  $("revTitle").textContent = "Einen Moment";
+  $("revMe").textContent = "–";
+  $("revOpp").textContent = "–";
+  $("revOppName").textContent = nameOf(oppUid());
+  $("revGold").textContent = "";
+  $("revMatch").classList.add("hidden");
+  $("revDecide").classList.add("hidden");
+  $("btnRevealAll").classList.add("hidden");
+  $("btnNextRound").classList.add("hidden");
+  $("revNote").textContent =
+    "Die Auflösung wird noch geholt. Das kann bei schwacher Verbindung ein paar Sekunden dauern.";
+
+  $("revList").innerHTML =
+    `<div class="dr"><span class="rk">··</span>
+       <div class="grow"><div class="nm">Auflösung wird geladen</div>
+       <div class="de">es wird automatisch weiter versucht</div></div></div>
+     <button class="btn ghost" id="btnRevRetry" style="margin-top:12px">Nochmal versuchen</button>`;
+  $("btnRevRetry").onclick = () => {
+    $("btnRevRetry").textContent = "Wird versucht …";
+    solutionCache.delete(currentGameId + ":" + rid(n));
+    refreshGame(true);
+  };
+
   openSheet("sheet-reveal");
 }
 
@@ -5198,7 +5259,7 @@ async function enterActiveAlt(gid){
   if (currentGameId !== gid || (currentGame?.round ?? 0) !== n) return;
   altSolCache = sol;
   if (!sol){
-    toast("Die Runde ließ sich nicht laden. Ich versuche es weiter …");
+    zeigeLadefehler(n);
     setTimeout(() => refreshGame(true), 1500);
     return;
   }
