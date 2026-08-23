@@ -822,17 +822,29 @@
 
   /* ---------- Intro ---------- */
   #splash{
+    /* Dieselbe Farbe wie body und wie background_color im Manifest.
+       Drei verschiedene Blautöne ergaben beim Übergang vom Startbild
+       zur Seite den Balken am unteren Rand. */
     position:fixed;inset:0;z-index:200;display:grid;place-items:center;
-    background:var(--deep);
+    background:var(--ink);
     padding:calc(24px + env(safe-area-inset-top)) 24px
             calc(24px + env(safe-area-inset-bottom));
     text-align:center;
-    animation:splashOut 3.6s cubic-bezier(.6,.05,.2,1) forwards;
   }
+  #splash.bereit{animation:splashOut 3.6s cubic-bezier(.6,.05,.2,1) forwards}
   @keyframes splashOut{0%,84%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden;transform:scale(1.06)}}
 
+  /* Der Inhalt bleibt unsichtbar, bis die Schrift geladen ist. Sonst
+     wird erst in der Ersatzschrift gesetzt und springt beim Wechsel. */
+  #splash .s-inner{visibility:hidden}
+  #splash.bereit .s-inner{visibility:visible}
+  /* Feste Höhen: Die Zeilen erscheinen nacheinander, sollen dabei aber
+     nichts verschieben. */
+  #splash .s-sub{min-height:1.6em}
+  #splash .s-podium{min-height:52px}
+
   /* „Zeit für ein" — kommt von oben herein */
-  #splash .s-pre{
+  #splash.bereit .s-pre{
     font-size:.9rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;
     color:var(--muted);margin-bottom:10px;
     opacity:0;transform:translateY(-10px);
@@ -846,9 +858,12 @@
     position:relative;overflow:hidden;
     font-family:var(--display);font-weight:800;letter-spacing:-.045em;line-height:1;
     font-size:clamp(2.8rem,15vw,5rem);color:var(--yellow);
-    transform:translateY(105%);animation:sRise .85s .35s cubic-bezier(.16,1,.3,1) forwards
+    /* 105 % reichten nicht: Die Maske hat unten Innenabstand, dadurch
+       lugten die Oberkanten der Buchstaben hervor. */
+    transform:translateY(135%)
   }
-  #splash .s-shine{
+  #splash.bereit .s-word{animation:sRise .85s .35s cubic-bezier(.16,1,.3,1) forwards}
+  #splash.bereit .s-shine{
     position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.85) 50%,transparent 62%);
     transform:translateX(-130%);
@@ -856,14 +871,14 @@
   }
   @keyframes sShine{to{transform:translateX(130%)}}
 
-  #splash .s-rule{
+  #splash.bereit .s-rule{
     height:2px;width:0;margin:6px auto 16px;background:var(--muted);
     animation:sRule .7s .95s cubic-bezier(.5,0,.2,1) forwards
   }
 
   /* Der Slogan sortiert sich Wort für Wort ein */
   #splash .s-sub{font-family:var(--body);font-size:1.12rem;color:#CFCEE4;line-height:1.5}
-  #splash .s-sub span{
+  #splash.bereit .s-sub span{
     display:inline-block;
     opacity:0;transform:translateY(14px) rotate(-4deg);
     animation:sWord .55s cubic-bezier(.16,1.25,.3,1) forwards;
@@ -877,14 +892,16 @@
     display:flex;align-items:flex-end;justify-content:center;gap:9px;
     height:52px;margin-top:26px
   }
-  #splash .s-podium i{
-    display:block;width:26px;height:0;border-radius:6px 6px 3px 3px;background:var(--ink-3);
-    border:1px solid var(--line);
+  /* Vor dem Wachsen unsichtbar: Mit Rahmen und Höhe 0 standen dort sonst
+     von Anfang an drei dünne Striche herum. */
+  #splash.bereit .s-podium i{
+    display:block;width:26px;height:0;opacity:0;
+    border-radius:6px 6px 3px 3px;background:var(--ink-3);border:1px solid var(--line);
     animation:sBar .6s cubic-bezier(.16,1.1,.3,1) forwards;
     animation-delay:calc(1.55s + var(--d) * .12s)
   }
   #splash .s-podium i:nth-child(2){background:rgba(255,201,60,.22);border-color:var(--yellow)}
-  @keyframes sBar{to{height:var(--h)}}
+  @keyframes sBar{from{opacity:0}to{opacity:1;height:var(--h)}}
 
   @keyframes sFade{to{opacity:1}}
   @keyframes sRise{to{transform:translateY(0)}}
@@ -892,13 +909,15 @@
 
   #splash.skip{animation:splashOut .28s forwards}
   @media (prefers-reduced-motion:reduce){
-    #splash{animation:splashOut 2.6s steps(1,end) forwards}
-    #splash .s-pre,#splash .s-word,#splash .s-rule,#splash .s-sub span,#splash .s-podium i{
-      animation:none;opacity:1;transform:none
-    }
+    #splash.bereit{animation:splashOut 2.6s steps(1,end) forwards}
+    #splash.bereit .s-pre,
+    #splash.bereit .s-word,
+    #splash.bereit .s-rule,
+    #splash.bereit .s-sub span,
+    #splash.bereit .s-podium i{animation:none;opacity:1;transform:none}
     #splash .s-shine{display:none}
-    #splash .s-rule{width:min(230px,62vw)}
-    #splash .s-podium i{height:var(--h)}
+    #splash.bereit .s-rule{width:min(230px,62vw)}
+    #splash.bereit .s-podium i{height:var(--h);opacity:1}
   }
 
   /* ---------- Sieganimation ---------- */
@@ -926,7 +945,7 @@
 </head>
 <body>
 <div id="splash">
-  <div>
+  <div class="s-inner">
     <div class="s-pre">Zeit für ein</div>
     <div class="s-mask"><div class="s-word">List Duell<i class="s-shine"></i></div></div>
     <div class="s-rule"></div>
@@ -1847,10 +1866,26 @@ const $ = id => document.getElementById(id);
 (function(){
   const sp = $("splash");
   if (!sp) return;
+
   const kill = () => sp.remove();
   sp.addEventListener("click", () => { sp.classList.add("skip"); setTimeout(kill, 300); });
   sp.addEventListener("animationend", e => { if (e.animationName === "splashOut") kill(); });
-  setTimeout(kill, 4200);
+
+  /* Erst starten, wenn Archivo geladen ist. Sonst wird der Schriftzug
+     kurz in der Ersatzschrift gesetzt und springt beim Wechsel — das war
+     das Verrutschen am Anfang. Nach spätestens einer Sekunde geht es auch
+     ohne los, damit niemand vor einem leeren Bild sitzt. */
+  const los = () => {
+    if (sp.isConnected) sp.classList.add("bereit");
+  };
+  const spaetestens = setTimeout(los, 1000);
+  const fertig = () => { clearTimeout(spaetestens); los(); };
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fertig).catch(fertig);
+  else fertig();
+
+  // Sicherheitsnetz, falls animationend ausbleibt
+  setTimeout(kill, 6000);
 })();
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -3616,15 +3651,18 @@ function watchGame(gid){
   lastSnapAt = Date.now();
   draftRound = -1;
 
+  /* Kein Filter auf hasPendingWrites mehr. Der war wahr, solange ein
+     eigener Schreibvorgang noch nicht bestätigt war — und verwarf in
+     dieser Zeit JEDEN eingehenden Stand, auch den mit der Antwort des
+     Gegners. Da im Auflösungspfad ständig nebenbei geschrieben wird, war
+     praktisch immer einer offen. Das war die Ursache dafür, dass es
+     überall stockte. Doppelte Verarbeitung schadet nicht: Alle Ansichten
+     zeichnen denselben Stand gleich. */
   unsubGame = onSnapshot(
     gameRefOf(gid),
-    { includeMetadataChanges: true },
     async snap => {
       if (!snap.exists()){ await leaveGame(); return; }
-      if (snap.metadata.hasPendingWrites) return;
-      const daten = snap.data();
-      // Eine Ausnahme hier legte bisher den ganzen Listener still.
-      try { await handleGame(gid, daten); }
+      try { await handleGame(gid, snap.data()); }
       catch(e){ console.error("Spielstand nicht verarbeitet:", e); }
     },
     err => {
@@ -3751,11 +3789,14 @@ setInterval(() => {
     }
   }
 
-  const grenze = wartetAufGegner ? 4000 : 20000;
-  if (Date.now() - lastSnapAt < grenze) return;
+  /* Fester Takt, solange ein Spiel offen und die App sichtbar ist. Der
+     alte Takt hing an wartetAufGegner — das wiederum wurde nur in
+     handleGame gesetzt. Lief handleGame nicht, blieb es beim langen Takt,
+     und genau dann hätte man den kurzen gebraucht. */
+  if (Date.now() - lastSnapAt < 3000) return;
   lastSnapAt = Date.now();
   refreshGame();
-}, 2000);
+}, 1500);
 
 async function enterActive(gid){
   const g = currentGame;
