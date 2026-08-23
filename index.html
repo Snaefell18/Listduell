@@ -4054,7 +4054,7 @@ function renderReveal(n, sol, mine, theirs, iAmReady){
     const matchball = vorMe === 2 || vorOpp === 2;
 
     revealCtx = { n, key, sol, mine, theirs, opp, r, matchball, vorMe, vorOpp,
-                  step: 0, done: !matchball };
+                  step: 0, done: !matchball, iAmReady: !!iAmReady };
 
     const mp = scoreOf(mine, sol.top), op = scoreOf(theirs, sol.top);
     $("revLabel").textContent = `Runde ${zz(n+1)}`;
@@ -4237,14 +4237,21 @@ function finishReveal(){
     }
   }
 
-  updateNextButton($("btnNextRound").dataset.ready === "1");
+  updateNextButton(!!revealCtx?.iAmReady);
 }
 
 /* Letzte Rückfallebene. Wartet man länger als zwanzig Sekunden auf den
    anderen, wird der Knopf wieder anfassbar und stößt alles erneut an.
    Damit kann kein Zustand entstehen, aus dem man nicht mehr herauskommt. */
 let hakelTimer = null;
-function hakelWache(btnId){
+let hakelFuer = null;
+let stufenWache = null;
+function hakelWache(btnId, kennung){
+  /* Nicht bei jedem Neuzeichnen neu starten. Der Wachhund zeichnet alle
+     drei Sekunden neu — damit hätte der Zeitgeber die zwanzig Sekunden
+     nie erreicht und der Notausgang wäre nie aufgegangen. */
+  if (hakelFuer === kennung && hakelTimer) return;
+  hakelFuer = kennung;
   clearTimeout(hakelTimer);
   hakelTimer = setTimeout(() => {
     const b = $(btnId);
@@ -4253,26 +4260,41 @@ function hakelWache(btnId){
     // Bereitschaft ohnehin erneut und stößt damit alles an.
     b.disabled = false;
     b.textContent = "Nochmal versuchen";
+    hakelTimer = null;
   }, 20000);
 }
 
 function updateNextButton(iAmReady){
   const b = $("btnNextRound");
   const { n, opp, done } = revealCtx || {};
-  b.dataset.ready = iAmReady ? "1" : "";
+  /* Die Bereitschaft gehört zur Runde, nicht zum Knopf. Vorher stand sie
+     in dataset.ready und blieb über den Rundenwechsel hinweg erhalten —
+     ab Runde 2 hielt der Knopf beide für längst bereit, sperrte sich mit
+     „Warte auf …" und niemand konnte mehr drücken. */
+  if (revealCtx) revealCtx.iAmReady = !!iAmReady;
 
   if (!done){
     b.disabled = true;
     b.textContent = "Die Auflösung läuft …";
+    /* Absicherung für das stufenweise Aufdecken: Wird die App währenddessen
+       in den Hintergrund geschoben, drosselt der Browser die Zeitgeber und
+       die Abfolge käme nie ans Ende — der Knopf bliebe für immer gesperrt.
+       Nach acht Sekunden wird sie deshalb notfalls von Hand beendet. */
+    if (stufenWache !== n){
+      stufenWache = n;
+      setTimeout(() => {
+        if (revealCtx && revealCtx.n === n && !revealCtx.done) revealAll();
+      }, 8000);
+    }
     return;
   }
   const last = n + 1 >= roundCount();
   if (iAmReady){
     b.disabled = true;
     b.textContent = `Warte auf ${nameOf(opp)} …`;
-    hakelWache("btnNextRound");
+    hakelWache("btnNextRound", "rev:" + n);
   } else {
-    clearTimeout(hakelTimer);
+    clearTimeout(hakelTimer); hakelTimer = null; hakelFuer = null;
     b.disabled = false;
     b.textContent = last ? "Endstand ansehen" : "Weiter zu Runde " + (n + 2);
   }
@@ -5557,9 +5579,9 @@ function renderAltDone(n, sol){
   if (ready[me.uid]){
     b2.disabled = true;
     b2.textContent = `Warte auf ${nameOf(opp)} …`;
-    hakelWache("btnAltNext");
+    hakelWache("btnAltNext", "alt:" + n);
   } else {
-    clearTimeout(hakelTimer);
+    clearTimeout(hakelTimer); hakelTimer = null; hakelFuer = null;
     b2.disabled = false;
     b2.textContent = last ? "Endstand" : "Nächste Runde";
   }
