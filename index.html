@@ -85,7 +85,10 @@
     background:var(--paper);color:var(--ink)
   }
   .btn.ghost{background:transparent;color:var(--paper);border:1.5px solid var(--line-2)}
-  .btn.yellow{background:var(--orange);color:var(--on-orange)}
+  .btn.primary{background:var(--orange);color:var(--on-orange)}
+  .btn.yellow{background:var(--yellow);color:var(--on-yellow)}
+  /* Der Fokusrahmen ist sonst gelb — auf gelbem Grund unsichtbar. */
+  .btn.yellow:focus-visible{outline-color:var(--on-yellow)}
   .btn.magenta{background:var(--orange);color:var(--on-orange)}
   .btn:disabled{background:#111842;color:#4A5391;cursor:default}
   .btn.sm{width:auto;padding:11px 14px;font-size:12px;letter-spacing:.12em}
@@ -1007,7 +1010,7 @@
         </div>
         <input type="text" id="mailAddr" placeholder="E-Mail" autocomplete="email" inputmode="email" />
         <input type="text" id="mailPass" placeholder="Passwort" autocomplete="current-password" />
-        <button class="btn yellow" id="btnMailGo" style="margin-top:5px">Anmelden</button>
+        <button class="btn primary" id="btnMailGo" style="margin-top:5px">Anmelden</button>
         <button class="link" id="btnMailReset" style="width:100%;margin-top:8px">Passwort vergessen</button>
       </div>
 
@@ -1043,7 +1046,7 @@
     </div>
 
     <div class="stack">
-      <button class="btn yellow" id="obSave">Profil anlegen</button>
+      <button class="btn primary" id="obSave">Profil anlegen</button>
       <button class="link" id="obSignOut" style="width:100%;margin-top:10px">Abmelden</button>
     </div>
   </section>
@@ -1098,7 +1101,7 @@
     <div id="resumeCard" class="card hidden" style="border-color:rgba(255,201,60,.45);background:rgba(255,201,60,.07)">
       <div class="eyebrow" style="color:var(--yellow)">Laufendes Spiel</div>
       <p style="margin:8px 0 12px" id="resumeText">—</p>
-      <button class="btn sm yellow" id="btnResume">Weiterspielen</button>
+      <button class="btn sm primary" id="btnResume">Weiterspielen</button>
     </div>
 
     <div id="invitesCard" class="card hidden" style="border-color:rgba(255,201,60,.45);background:rgba(255,201,60,.07)">
@@ -1114,7 +1117,7 @@
       <div id="friendList" style="margin-top:8px"></div>
       <div class="row" style="margin-top:14px">
         <input type="text" id="addUsername" placeholder="Benutzername" autocomplete="off" />
-        <button class="btn sm yellow" id="btnAddFriend" style="flex:0 0 auto">Hinzufügen</button>
+        <button class="btn sm primary" id="btnAddFriend" style="flex:0 0 auto">Hinzufügen</button>
       </div>
     </div>
 
@@ -1239,7 +1242,7 @@
         <div class="orow"><span class="lbl"><b>Mindestens 30 Punkte</b><span>sonst ist der Lauf vorbei</span></span><span class="val">30</span></div>
         <div class="orow" style="border-bottom:0"><span class="lbl"><b>Es wird schwerer</b><span>je länger die Serie hält</span></span></div>
         <p class="dim" id="soloBestLine" style="font-size:12.5px;margin-top:12px"></p>
-        <button class="btn yellow" id="btnSoloGo" style="margin-top:12px">Los geht's</button>
+        <button class="btn primary" id="btnSoloGo" style="margin-top:12px">Los geht's</button>
         <button class="link" id="btnSoloCancel" style="width:100%;margin-top:6px">Doch nicht</button>
       </div>
     </div>
@@ -1278,7 +1281,7 @@
 
       <div class="board-foot">
         <div class="pool" id="soloPool"></div>
-        <button class="btn yellow" id="btnSoloSubmit" style="margin-top:12px" disabled>Alle fünf Plätze füllen</button>
+        <button class="btn primary" id="btnSoloSubmit" style="margin-top:12px" disabled>Alle fünf Plätze füllen</button>
         <button class="link" id="btnSoloQuit" style="width:100%;margin-top:10px;color:var(--orange)">Lauf beenden</button>
       </div>
     </div>
@@ -1306,7 +1309,7 @@
           <div class="eyebrow">Weltbestenliste</div>
           <div id="soloHighList" style="margin-top:6px"></div>
         </div>
-        <button class="btn yellow" id="btnSoloNext" style="margin-top:14px">Weiter</button>
+        <button class="btn primary" id="btnSoloNext" style="margin-top:14px">Weiter</button>
         <button class="link hidden" id="btnSoloHome" style="width:100%;margin-top:6px">Zurück ins Menü</button>
       </div>
     </div>
@@ -1358,7 +1361,7 @@
       <label for="giftGold">Gold</label>
       <div class="row">
         <input type="text" id="giftGold" placeholder="z. B. 250" inputmode="numeric" autocomplete="off" />
-        <button class="btn sm yellow" id="btnGiftGold" style="flex:0 0 auto">Senden</button>
+        <button class="btn sm primary" id="btnGiftGold" style="flex:0 0 auto">Senden</button>
       </div>
     </div>
 
@@ -1422,7 +1425,7 @@
       <label for="genCount">Anzahl</label>
       <div class="row">
         <input type="text" id="genCount" value="10" inputmode="numeric" autocomplete="off" />
-        <button class="btn sm yellow" id="btnGenerate" style="flex:0 0 auto">Erzeugen</button>
+        <button class="btn sm primary" id="btnGenerate" style="flex:0 0 auto">Erzeugen</button>
       </div>
 
       <div class="genbar hidden" id="genBar"><i></i></div>
@@ -1445,7 +1448,7 @@
       <div id="adminList" style="margin-top:8px"></div>
       <div class="row" style="margin-top:14px">
         <input type="text" id="adminUser" placeholder="Benutzername" autocomplete="off" />
-        <button class="btn sm yellow" id="btnAdminAdd" style="flex:0 0 auto">Ernennen</button>
+        <button class="btn sm primary" id="btnAdminAdd" style="flex:0 0 auto">Ernennen</button>
       </div>
       <p class="dim" style="font-size:.8rem;margin-top:10px">Gilt für beide Spiele — die Liste ist dieselbe wie bei Imposter.</p>
     </div>
@@ -1561,7 +1564,7 @@
     </div>
 
     <div class="stack">
-      <button class="btn yellow" id="frChallenge">Herausfordern</button>
+      <button class="btn primary" id="frChallenge">Herausfordern</button>
       <div style="height:10px"></div>
       <button class="btn ghost" id="frSetup">Spiel einstellen</button>
       <button class="link" id="frRemove" style="width:100%;margin-top:18px;color:var(--orange)">Freund entfernen</button>
@@ -1602,7 +1605,7 @@
     </div>
 
     <div class="stack">
-      <button class="btn yellow" id="btnSendSetup">Herausforderung senden</button>
+      <button class="btn primary" id="btnSendSetup">Herausforderung senden</button>
     </div>
   </section>
 
@@ -1640,7 +1643,7 @@
 
       <div class="board-foot">
         <div class="pool" id="optBox"></div>
-        <button class="btn yellow" id="btnSubmitList" style="margin-top:12px" disabled>Alle fünf Plätze füllen</button>
+        <button class="btn primary" id="btnSubmitList" style="margin-top:12px" disabled>Alle fünf Plätze füllen</button>
         <button class="link" id="btnAbort" style="width:100%;margin-top:10px;color:var(--orange)">Spiel abbrechen</button>
       </div>
     </div>
@@ -1669,7 +1672,7 @@
 
       <div class="board-foot">
         <div class="pool" id="altPool"></div>
-        <button class="btn yellow" id="btnAltPlay" style="margin-top:12px" disabled>Kandidat wählen</button>
+        <button class="btn primary" id="btnAltPlay" style="margin-top:12px" disabled>Kandidat wählen</button>
         <button class="link" id="btnAltAbort" style="width:100%;margin-top:10px;color:var(--orange)">Spiel abbrechen</button>
       </div>
     </div>
@@ -1693,7 +1696,7 @@
       <div class="sheet-body">
         <div id="altDoneList"></div>
         <p class="dim" id="altDoneNote" style="font-size:12.5px;margin-top:12px"></p>
-        <button class="btn yellow" id="btnAltNext" style="margin-top:14px">Weiter</button>
+        <button class="btn primary" id="btnAltNext" style="margin-top:14px">Weiter</button>
       </div>
     </div>
   </div>
@@ -1719,7 +1722,7 @@
         <button class="btn ghost sm hidden" id="btnRevealAll" style="width:100%;margin-top:12px">Alles aufdecken</button>
         <p class="decide hidden" id="revDecide"></p>
         <p class="dim" id="revNote" style="font-size:12.5px;margin-top:12px"></p>
-        <button class="btn yellow" id="btnNextRound" style="margin-top:14px">Weiter</button>
+        <button class="btn primary" id="btnNextRound" style="margin-top:14px">Weiter</button>
       </div>
     </div>
   </div>
@@ -1748,7 +1751,7 @@
 
       <div class="board-foot" style="display:flex;gap:6px">
         <button class="btn ghost" id="btnBackHome">Menü</button>
-        <button class="btn yellow" id="btnRematch">Revanche</button>
+        <button class="btn primary" id="btnRematch">Revanche</button>
       </div>
     </div>
     <canvas id="fx"></canvas>
@@ -2894,7 +2897,7 @@ async function loadFriends(){
         <div class="name">${esc(u.username)}</div>
         ${vsHTML(u.uid)}
       </div>
-      <button class="btn sm yellow" data-challenge="${esc(u.uid)}" ${busy?"disabled":""} style="white-space:nowrap">Herausfordern</button>
+      <button class="btn sm primary" data-challenge="${esc(u.uid)}" ${busy?"disabled":""} style="white-space:nowrap">Herausfordern</button>
       <button class="iconbtn box" data-setup="${esc(u.uid)}" ${busy?"disabled":""} aria-label="Spiel einstellen" title="Spiel einstellen">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3.2"/>
@@ -3000,7 +3003,7 @@ function renderInvites(invites){
           <div class="name">${esc(i.fromName)}</div>
           <div class="sub">fordert dich heraus</div>
         </div>
-        <button class="btn sm yellow" data-accept="${esc(i.gameId)}" style="flex:0 0 auto">Ja</button>
+        <button class="btn sm primary" data-accept="${esc(i.gameId)}" style="flex:0 0 auto">Ja</button>
         <button class="btn sm ghost" data-decline="${esc(i.gameId)}" style="flex:0 0 auto">Nein</button>
       </div>
       <div class="invmode">${esc(i.modeLabel || "Klassik")}</div>
