@@ -1953,8 +1953,6 @@ let sideEffectGuard = new Set();
 let pendingPhoto = null;
 const userCache = new Map();
 const solutionCache = new Map();   // "gid:r0" → { top:[…], note:"" }
-let draft = [];                    // aktuell gesetzte Plätze der laufenden Runde
-let draftRound = -1;
 
 /* ══════════════════════════════════════════════════════════════
    4) Anmeldung
@@ -3649,7 +3647,7 @@ function watchGame(gid){
   if (unsubGame) unsubGame();
   currentGameId = gid;
   lastSnapAt = Date.now();
-  draftRound = -1;
+  kEntwurfRunde = -1;
 
   /* Kein Filter auf hasPendingWrites mehr. Der war wahr, solange ein
      eigener Schreibvorgang noch nicht bestätigt war — und verwarf in
@@ -3691,9 +3689,6 @@ async function handleGame(gid, daten){
   if (letztesSpiel !== gid || letzteRunde !== runde){
     letztesSpiel = gid;
     letzteRunde = runde;
-    clearRevealTimers();
-    revealKey = null;
-    revealCtx = null;
     altSeen = 0;
     altBusy = false;
     alleSheetsZu();
@@ -3798,84 +3793,17 @@ setInterval(() => {
   refreshGame();
 }, 1500);
 
-async function enterActive(gid){
-  const g = currentGame;
-  if (modeOf(g) === "wechsel"){ await enterActiveAlt(gid); return; }
-  const n = g.round ?? 0;
-  const key = rid(n);
-  const opp = oppUid();
-  const answers = g.answers?.[key] || {};
-  const mine = answers[me.uid];
-  const theirs = answers[opp];
-
-
-  if (!mine){ setWarten(false); closeSheet("sheet-reveal"); renderRound(n, false); return; }
-
-  if (!theirs){
-    // Das Brett bleibt stehen, gesperrt, mit meiner Liste darin.
-    setWarten(true);
-    draft = mine.slice(); draftRound = n;
-    closeSheet("sheet-reveal");
-    renderRound(n, true);
-    return;
-  }
-
-  // Beide haben abgegeben — Lösung darf jetzt gelesen werden.
-  let sol = solutionCache.get(gid + ":" + key);
-  if (!sol){
-    draft = mine.slice(); draftRound = n;
-    renderRound(n, true);
-    $("rndTurn").textContent = "Beide fertig — Auflösung wird geholt …";
-    sol = await loadSolution(gid, n);
-  }
-  if (!sol){
-    // Niemals stumm zurückkehren: Sonst steht das gesperrte Brett da und
-    // beide sitzen fest, ohne zu wissen, worauf sie warten.
-    zeigeLadefehler(n);
-    setTimeout(() => refreshGame(true), 1500);
-    return;
-  }
-  // Nur ein echter Rundenwechsel bricht ab. Der Generationszähler darf
-  // hier NICHT mehr entscheiden: Ein eigener Schreibvorgang lässt ihn
-  // weiterspringen, und der Durchlauf hätte sich selbst für veraltet
-  // erklärt — genau daran blieb das Spiel nach dem Abgeben stehen.
-  if (currentGameId !== gid || (currentGame?.round ?? 0) !== n) return;
-
-  /* Ab hier wird zuerst gezeichnet und erst danach geschrieben. Kein
-     Schreibvorgang steht mehr zwischen „beide fertig" und der sichtbaren
-     Auflösung. */
-  const frisch = currentGame || g;
-  const ready = frisch.ready?.[key] || {};
-  setWarten(!!ready[me.uid] && !ready[opp]);
-  draft = mine.slice(); draftRound = n;
-  renderRound(n, true);
-  renderReveal(n, sol, mine, theirs, ready[me.uid]);
-
-  // Eigenes Ergebnis festhalten — nebenbei, ohne den Bildschirm aufzuhalten.
-  const myScore = scoreOf(mine, sol.top);
-  if (frisch.scores?.[key]?.[me.uid] === undefined && darfWieder("score:" + gid + ":" + n)){
-    updateDoc(gameRefOf(gid), { [`scores.${key}.${me.uid}`]: myScore })
-      .catch(e => console.warn("Punkte nicht gespeichert, wird erneut versucht:", e.code || e));
-  }
-
-  // Weiterschalten ebenfalls nebenbei.
-  if (ready[me.uid] && ready[opp] && darfWieder("adv:" + gid + ":" + n)){
-    const weiter = n + 1 < roundCount()
-      ? { round: n + 1 }
-      : { status: "finished", finishedAt: serverTimestamp() };
-    updateDoc(gameRefOf(gid), weiter)
-      .catch(e => console.warn("Runde nicht weitergeschaltet, wird erneut versucht:", e.code || e));
-  }
-}
-
+/* ---------- Lösung nachladen ----------
+   Die Regel gibt die Lösung erst frei, wenn beide Antworten auf dem
+   Server liegen. Kommt der Schnappschuss einen Wimpernschlag früher an
+   als die Freigabe greift, scheitert der erste Versuch — deshalb hier
+   kurze Abstände statt der trägen Standardschleife. Kein gemerkter
+   Zustand: Der Zwischenspeicher hält nur fertige Lösungen, nie einen
+   Fehlversuch. */
 async function loadSolution(gid, n){
   const ck = gid + ":" + rid(n);
   if (solutionCache.has(ck)) return solutionCache.get(ck);
 
-  /* Die Regel gibt die Lösung erst frei, wenn beide Antworten auf dem
-     Server liegen. Kommt der Schnappschuss einen Wimpernschlag früher an
-     als die Freigabe greift, scheitert der erste Versuch — deshalb hier
-     kurze Abstände statt der trägen Standardschleife. */
   const ref = doc(db, GAMES, gid, "secrets", rid(n));
   const pausen = [0, 120, 200, 320, 500, 800, 1200, 1800];
   let letzterFehler = null;
@@ -3909,212 +3837,252 @@ function scoreOf(list, top){
 }
 const norm = s => String(s ?? "").toLowerCase().replace(/\s+/g," ").trim();
 
-/* ---------- Runde spielen · Klassik ----------
-   Gleiche Bausteine wie Abwechselnd: gleicher Kopf, gleiche Zeilen,
-   gleiche Chips. Unterschied nur im Ablauf. */
-function renderRound(n, warten){
-  if ((currentGame?.round ?? 0) !== n) return;
-  /* Nur beim echten Rundenstart zurücksetzen. Beim Warten und beim
-     Aufdecken dient das Brett bloß als Hintergrund für das Sheet — würde
-     hier revealKey geleert, baute sich die Auflösung bei jedem
-     Schnappschuss neu auf und der Weiter-Knopf bliebe für immer gesperrt. */
-  if (!warten){
-    closeSheet("sheet-reveal");
-    clearRevealTimers();
-    revealKey = null;
+/* Ausgang einer bereits gespielten Runde — allein aus dem Spieldokument
+   abgeleitet: aus der Lösung, wenn sie im Zwischenspeicher liegt, sonst
+   aus den gespeicherten Punkten. Nichts wird gemerkt, der Aufruf ist
+   beliebig oft wiederholbar. Gibt "me", "opp", "draw" oder null zurück,
+   wenn die Runde (noch) nicht bewertbar ist. */
+function roundOutcome(i){
+  const g = currentGame;
+  if (!g) return null;
+  const opp = oppUid();
+  const key = rid(i);
+  let mp, op;
+  const sol = solutionCache.get(currentGameId + ":" + key);
+  const a = g.answers?.[key] || {};
+  if (sol && a[me.uid] && a[opp]){
+    mp = scoreOf(a[me.uid], sol.top);
+    op = scoreOf(a[opp], sol.top);
+  } else {
+    mp = g.scores?.[key]?.[me.uid];
+    op = g.scores?.[key]?.[opp];
+    if (mp === undefined || op === undefined) return null;
   }
-  const r = currentGame.rounds?.[n];
-  if (!r){ toast("Die Runde konnte nicht geladen werden."); return; }
+  return mp > op ? "me" : op > mp ? "opp" : "draw";
+}
 
-  if (draftRound !== n){ draft = Array(5).fill(null); draftRound = n; }
+/* ══════════════════════════════════════════════════════════════
+   Klassik — neu gebaut
 
-  const g = currentGame, opp = oppUid();
+   Leitgedanke: Was auf dem Bildschirm steht, wird bei jedem Aufruf
+   allein aus dem Spieldokument abgeleitet. Es gibt keinen gemerkten
+   Zwischenzustand mehr — kein revealKey, kein revealCtx, keine
+   Markierung am Knopf, keine Dauersperren. Genau dieser Zwischenzustand
+   war die Quelle sämtlicher Hänger: Er blieb über Runden hinweg stehen
+   und widersprach irgendwann dem Dokument.
+
+   Drei Phasen, aus dem Dokument ablesbar:
+     A  eigene Antwort fehlt        → Brett offen
+     B  eigene da, gegnerische fehlt → Brett gesperrt, warten
+     C  beide da                     → Brett gesperrt, Auflösung offen
+   ══════════════════════════════════════════════════════════════ */
+
+let kEntwurf = [];        // die fünf gesetzten Plätze der laufenden Runde
+let kEntwurfRunde = -1;
+
+async function enterActive(gid){
+  const g = currentGame;
+  if (modeOf(g) === "wechsel"){ await enterActiveAlt(gid); return; }
+
+  const n = g.round ?? 0;
+  const key = rid(n);
+  const opp = oppUid();
+  const a = g.answers?.[key] || {};
+  const mine = a[me.uid];
+  const theirs = a[opp];
+
+  // ---- Phase A: noch nicht abgegeben ----
+  if (!mine){
+    setWarten(false);
+    closeSheet("sheet-reveal");
+    kBrett(n, false);
+    return;
+  }
+
+  // ---- Phase B: auf den Gegner warten ----
+  if (!theirs){
+    setWarten(true);
+    closeSheet("sheet-reveal");
+    kEntwurf = mine.slice(); kEntwurfRunde = n;
+    kBrett(n, true, `${nameOf(opp)} tippt noch …`);
+    return;
+  }
+
+  // ---- Phase C: beide fertig ----
+  kEntwurf = mine.slice(); kEntwurfRunde = n;
+
+  let sol = solutionCache.get(gid + ":" + key);
+  if (!sol){
+    kBrett(n, true, "Beide fertig — Auflösung wird geholt …");
+    sol = await loadSolution(gid, n);
+    // Nach dem Warten: gehört das Ergebnis noch zur laufenden Runde?
+    if (currentGameId !== gid || (currentGame?.round ?? 0) !== n) return;
+  }
+  if (!sol){
+    kLadefehler(n);
+    setTimeout(() => refreshGame(true), 1500);
+    return;
+  }
+
+  const bereit = !!currentGame.ready?.[key]?.[me.uid];
+  setWarten(bereit && !currentGame.ready?.[key]?.[opp]);
+
+  kBrett(n, true, "Beide fertig");
+  kAufloesung(n, sol, mine, theirs, bereit);
+
+  /* Erst zeichnen, dann schreiben — und nie auf einen Schreibvorgang
+     warten. Beides nebenbei, beides beliebig oft wiederholbar. */
+  const meineP = scoreOf(mine, sol.top);
+  if (currentGame.scores?.[key]?.[me.uid] === undefined && darfWieder("score:" + gid + ":" + n)){
+    updateDoc(gameRefOf(gid), { [`scores.${key}.${me.uid}`]: meineP })
+      .catch(e => console.warn("Punkte nicht gespeichert:", e.code || e));
+  }
+
+  const beideBereit = currentGame.ready?.[key]?.[me.uid] && currentGame.ready?.[key]?.[opp];
+  if (beideBereit && darfWieder("adv:" + gid + ":" + n)){
+    const weiter = n + 1 < roundCount()
+      ? { round: n + 1 }
+      : { status: "finished", finishedAt: serverTimestamp() };
+    updateDoc(gameRefOf(gid), weiter)
+      .catch(e => console.warn("Runde nicht weitergeschaltet:", e.code || e));
+  }
+}
+
+/* ---------- Brett ----------
+   Wird bei jedem Aufruf vollständig neu gezeichnet. Das ist billig und
+   macht jeden Aufruf für sich genommen richtig. */
+function kBrett(n, gesperrt, statusText){
+  const g = currentGame;
+  const r = g?.rounds?.[n];
+  if (!r) return;
+  if ((g.round ?? 0) !== n) return;
+
+  if (kEntwurfRunde !== n){ kEntwurf = Array(5).fill(null); kEntwurfRunde = n; }
+
+  const opp = oppUid();
   let gm = 0, go = 0;
   for (let i = 0; i < n; i++){
-    const sol = solutionCache.get(currentGameId + ":" + rid(i));
-    const a2 = g.answers?.[rid(i)] || {};
-    if (sol){ gm += scoreOf(a2[me.uid], sol.top); go += scoreOf(a2[opp], sol.top); }
+    const s = solutionCache.get(currentGameId + ":" + rid(i));
+    const a = g.answers?.[rid(i)] || {};
+    if (s){ gm += scoreOf(a[me.uid], s.top); go += scoreOf(a[opp], s.top); }
+    else {
+      gm += g.scores?.[rid(i)]?.[me.uid] ?? 0;
+      go += g.scores?.[rid(i)]?.[opp] ?? 0;
+    }
   }
 
   barHTML(n, "rndBar", "rndNum");
-  scoreHTML("rndScore", gm, go, 0, 0, null);
+  scoreHTML("rndScore", gm, go, 0, 0, null, null);
   $("roundQuestion").textContent = r.q;
   $("roundUnit").textContent = (r.unit ? r.unit + " · " : "") + "fünf von zehn gehören rein";
 
   const t = $("rndTurn");
-  t.classList.toggle("waiting", !!warten);
-  t.textContent = warten ? `${nameOf(opp)} tippt noch …` : "Ihr tippt gleichzeitig";
+  t.classList.toggle("waiting", !!gesperrt);
+  t.textContent = statusText || "Ihr tippt gleichzeitig";
 
-  renderSlots(!!warten);
-  renderOptions(r.options || [], !!warten);
+  $("slotBox").innerHTML = kEntwurf.map((v, i) => v
+    ? `<button class="slot filled" data-slot="${i}" ${gesperrt ? "disabled" : ""}>
+         <span class="rk">${zz(i+1)}</span><span class="val">${esc(v)}</span>
+         ${gesperrt ? "" : `<span class="by">×</span>`}
+       </button>`
+    : `<button class="slot empty" data-slot="${i}" ${gesperrt ? "disabled" : ""}>
+         <span class="rk">${zz(i+1)}</span><span class="val">offen</span>
+       </button>`).join("");
+
+  $("optBox").innerHTML = (r.options || []).map(o => {
+    const benutzt = kEntwurf.includes(o);
+    return `<button class="chip ${benutzt ? "used" : ""}" data-opt="${esc(o)}"
+              ${benutzt || gesperrt ? "disabled" : ""}>${esc(o)}</button>`;
+  }).join("");
+
+  if (!gesperrt){
+    $("slotBox").querySelectorAll("[data-slot]").forEach(b => b.onclick = () => {
+      const i = Number(b.dataset.slot);
+      if (kEntwurf[i]){ kEntwurf[i] = null; kBrett(n, false); }
+    });
+    $("optBox").querySelectorAll("[data-opt]").forEach(b => b.onclick = () => {
+      const i = kEntwurf.findIndex(x => x === null);
+      if (i === -1) return;
+      kEntwurf[i] = b.dataset.opt;
+      kBrett(n, false);
+      const row = $("slotBox").children[i];
+      if (row){ row.classList.add("lock"); setTimeout(() => row.classList.remove("lock"), 700); }
+    });
+  }
+
+  const voll = kEntwurf.every(Boolean);
+  const btn = $("btnSubmitList");
+  btn.disabled = gesperrt || !voll;
+  btn.textContent = gesperrt ? "Abgegeben" : voll ? "Liste abgeben" : "Alle fünf Plätze füllen";
+
   show("screen-round");
 }
 
-function renderSlots(warten){
-  $("slotBox").innerHTML = draft.map((v, i) => {
-    if (v){
-      return `<button class="slot filled" data-slot="${i}" ${warten ? "disabled" : ""}>
-        <span class="rk">${zz(i+1)}</span>
-        <span class="val">${esc(v)}</span>
-        <span class="by">×</span>
-      </button>`;
-    }
-    return `<button class="slot empty" data-slot="${i}" ${warten ? "disabled" : ""}>
-      <span class="rk">${zz(i+1)}</span>
-      <span class="val">offen</span>
-    </button>`;
-  }).join("");
-
-  $("slotBox").querySelectorAll("[data-slot]").forEach(b => b.onclick = () => {
-    const i = Number(b.dataset.slot);
-    if (draft[i]){
-      draft[i] = null;
-      renderSlots(warten);
-      renderOptions(currentGame.rounds[draftRound].options, warten);
-    }
-  });
-
-  const full = draft.every(Boolean);
-  const btn = $("btnSubmitList");
-  btn.disabled = warten || !full;
-  btn.textContent = warten ? "Abgegeben" : full ? "Liste abgeben" : "Alle fünf Plätze füllen";
-}
-
-function renderOptions(options, warten){
-  $("optBox").innerHTML = options.map(o => {
-    const used = draft.some(d => d === o);
-    return `<button class="chip ${used?"used":""}" data-opt="${esc(o)}" ${used||warten?"disabled":""}>${esc(o)}</button>`;
-  }).join("");
-
-  $("optBox").querySelectorAll("[data-opt]").forEach(b => b.onclick = () => {
-    const i = draft.findIndex(x => x === null);
-    if (i === -1){ toast("Alle fünf Plätze sind belegt."); return; }
-    draft[i] = b.dataset.opt;
-    renderSlots(warten);
-    renderOptions(options, warten);
-    // Kurzes Einrasten, damit man sieht, wo der Kandidat gelandet ist.
-    const row = $("slotBox").children[i];
-    if (row) { row.classList.add("lock"); setTimeout(() => row.classList.remove("lock"), 700); }
-  });
-}
-
-$("btnSubmitList").onclick = async () => {
-  if (!currentGameId || !draft.every(Boolean)) return;
-  const n = currentGame.round ?? 0;
-  const btn = $("btnSubmitList"); btn.disabled = true; btn.textContent = "Wird abgegeben …";
-  try {
-    await updateDoc(gameRefOf(currentGameId), { [`answers.${rid(n)}.${me.uid}`]: draft.slice() });
-  } catch(e){
-    toast("Abgeben fehlgeschlagen: " + (e.code || e.message));
-    btn.disabled = false;
-  }
-  btn.textContent = "Liste abgeben";
-};
-
 /* ---------- Auflösung ----------
-   Steht es 2:x, kann diese Runde das Spiel entscheiden. Dann deckt sich
-   die Lösung Platz für Platz auf und der Punktestand zählt mit, statt
-   alles auf einen Schlag hinzuwerfen. Sonst erscheint sofort alles. */
-let revealKey = null;
-let revealCtx = null;
-let revealTimers = [];
-
-function clearRevealTimers(){
-  revealTimers.forEach(clearTimeout);
-  revealTimers = [];
-}
-
-function renderReveal(n, sol, mine, theirs, iAmReady){
+   Kein stufenweises Aufdecken mehr. Es war die Quelle dafür, dass der
+   Weiter-Knopf gesperrt blieb, wenn die Abfolge nicht ans Ende kam. Die
+   Zeilen erscheinen versetzt, aber der Knopf hängt nicht daran. */
+function kAufloesung(n, sol, mine, theirs, bereit){
+  const g = currentGame;
+  if ((g.round ?? 0) !== n) return;
   const opp = oppUid();
-  const r = currentGame?.rounds?.[n];
-  if (!r) return;
-  /* Harte Grenze: Nur die laufende Runde darf aufgedeckt werden. Ein
-     verspäteter Aufruf aus einer abgeschlossenen Runde — etwa weil sein
-     Lösungsabruf länger brauchte als der Rundenwechsel — würde sonst die
-     alte Auflösung über die neue legen. */
-  if ((currentGame?.round ?? 0) !== n) return;
-  const key = currentGameId + ":" + rid(n);
+  const mp = scoreOf(mine, sol.top);
+  const op = scoreOf(theirs, sol.top);
 
-  // Nur einmal pro Runde aufbauen — sonst würde jeder Schnappschuss vom
-  // Gegner die Animation von vorn beginnen lassen. Die Rundennummer im
-  // Zustand wird mitgeprüft: Stimmt sie nicht, gehören die Zeilen im
-  // Bildschirm zu einer anderen Runde und müssen neu gebaut werden.
-  // Entscheidend ist, WAS gerade im Bildschirm steht: Stimmen Schlüssel,
-  // Rundennummer oder die zugrunde liegende Lösung nicht mit dem überein,
-  // was gezeichnet werden soll, werden die Zeilen neu gebaut.
-  if (revealKey !== key || revealCtx?.n !== n || revealCtx?.sol !== sol){
-    clearRevealTimers();
-    revealKey = key;
-
-    let vorMe = 0, vorOpp = 0;
-    for (let i = 0; i < n; i++){
-      const o = roundOutcome(i);
-      if (o === "me") vorMe++; else if (o === "opp") vorOpp++;
-    }
-    const matchball = vorMe === 2 || vorOpp === 2;
-
-    revealCtx = { n, key, sol, mine, theirs, opp, r, matchball, vorMe, vorOpp,
-                  step: 0, done: !matchball, iAmReady: !!iAmReady };
-
-    const mp = scoreOf(mine, sol.top), op = scoreOf(theirs, sol.top);
-    $("revLabel").textContent = `Runde ${zz(n+1)}`;
-    $("revTitle").textContent = mp > op ? "Gewonnen!" : mp < op ? "Verloren." : "Gleichstand";
-    $("revMe").textContent = mp;
-    $("revOpp").textContent = op;
-    $("revOppName").textContent = nameOf(opp);
-    $("revGold").textContent = (mp > op ? "+4" : "+0") + " Gold";
-
-    const ban = $("revMatch");
-    if (matchball){
-      ban.textContent = (vorMe === 2 && vorOpp === 2)
-        ? "Matchball für beide — diese Runde entscheidet"
-        : vorMe === 2
-          ? "Dein Matchball — mit dieser Runde gewinnst du das Spiel"
-          : `Matchball für ${nameOf(opp)} — diese Runde kann das Spiel entscheiden`;
-      ban.classList.remove("hidden");
-    } else {
-      ban.classList.add("hidden");
-    }
-
-    buildRevealRows();
-    // Der Hinweissatz nennt oft die entscheidende Zahl — beim Matchball
-    // bleibt er zurück, bis alles offen liegt.
-    $("revNote").textContent = matchball ? "" : (sol.note || "");
-    $("revDecide").classList.add("hidden");
-
-    if (matchball){
-      $("btnRevealAll").classList.remove("hidden");
-      renderRunningScore(0);
-      revealTimers.push(setTimeout(() => revealNext(), 900));
-    } else {
-      $("btnRevealAll").classList.add("hidden");
-      revealAll();
-    }
-  }
-
-  /* Kopfzeile und Rundenstand bei jedem Aufruf frisch schreiben. Sie
-     kosten nichts und können so nie aus einer alten Runde stammen. */
-  const mp = scoreOf(mine, sol.top), op = scoreOf(theirs, sol.top);
   $("revLabel").textContent = `Runde ${zz(n+1)}`;
   $("revTitle").textContent = mp > op ? "Gewonnen!" : mp < op ? "Verloren." : "Gleichstand";
+  $("revMe").textContent = mp;
+  $("revOpp").textContent = op;
   $("revOppName").textContent = nameOf(opp);
   $("revGold").textContent = (mp > op ? "+4" : "+0") + " Gold";
-  if (revealCtx?.done){ $("revMe").textContent = mp; $("revOpp").textContent = op; }
 
-  ladefehlerFuer = null;
-  $("btnNextRound").classList.remove("hidden");
-  updateNextButton(iAmReady);
+  // Matchball nur als Hinweis, ohne Einfluss auf die Bedienbarkeit
+  let vorMe = 0, vorOpp = 0;
+  for (let i = 0; i < n; i++){
+    const o = roundOutcome(i);
+    if (o === "me") vorMe++; else if (o === "opp") vorOpp++;
+  }
+  const ban = $("revMatch");
+  if (vorMe === 2 || vorOpp === 2){
+    ban.textContent = vorMe === 2 && vorOpp === 2
+      ? "Matchball für beide"
+      : vorMe === 2 ? "Dein Matchball" : `Matchball für ${nameOf(opp)}`;
+    ban.classList.remove("hidden");
+  } else ban.classList.add("hidden");
+
+  $("revList").innerHTML = sol.top.map((t, i) => {
+    const p = pointsFor(mine[i], i, sol.top);
+    const wert = sol.values?.[t] || "";
+    const cls = p === 10 ? "p10" : p === 5 ? "p5" : "";
+    return `<div class="dr ${p ? "hit" : ""}" style="animation-delay:${(0.05 + i * 0.07).toFixed(2)}s">
+      <span class="rk">${zz(i+1)}</span>
+      <div class="grow">
+        <div class="nm">${esc(t)}</div>
+        <div class="de">Du: ${esc(mine[i] || "—")} · ${esc(nameOf(opp).slice(0,7))}: ${esc(theirs[i] || "—")}</div>
+      </div>
+      <span class="vv">${esc(wert)}</span>
+      <span class="pt ${cls}">+${p}</span>
+    </div>`;
+  }).join("");
+
+  $("revNote").textContent = sol.note || "";
+  $("revDecide").classList.add("hidden");
+  $("btnRevealAll").classList.add("hidden");
+
+  /* Der Knopf hängt allein am Dokument: bereit = ich habe gedrückt. */
+  const b = $("btnNextRound");
+  b.classList.remove("hidden");
+  const letzte = n + 1 >= roundCount();
+  b.disabled = !!bereit;
+  b.textContent = bereit
+    ? `Warte auf ${nameOf(opp)} …`
+    : letzte ? "Endstand ansehen" : "Weiter zu Runde " + (n + 2);
+
   openSheet("sheet-reveal");
 }
 
-/* Wenn die Lösung nicht kommt: Statt eines gesperrten Bretts ein Blatt,
-   das sagt, was los ist, und einen Knopf, der es erneut versucht. Ohne das
-   gab es einen Zustand, aus dem nur noch „Spiel abbrechen" herausführte. */
-let ladefehlerFuer = null;
-function zeigeLadefehler(n){
-  if (ladefehlerFuer === n && sheetOffen("sheet-reveal")) return;
-  ladefehlerFuer = n;
-
+/* Lösung nicht lesbar: sichtbar machen und einen Weg anbieten. */
+function kLadefehler(n){
   $("revLabel").textContent = `Runde ${zz(n+1)}`;
   $("revTitle").textContent = "Einen Moment";
   $("revMe").textContent = "–";
@@ -4126,190 +4094,46 @@ function zeigeLadefehler(n){
   $("btnRevealAll").classList.add("hidden");
   $("btnNextRound").classList.add("hidden");
   $("revNote").textContent =
-    "Die Auflösung wird noch geholt. Das kann bei schwacher Verbindung ein paar Sekunden dauern.";
-
+    "Die Auflösung wird geholt. Bei schwacher Verbindung dauert das ein paar Sekunden.";
   $("revList").innerHTML =
-    `<div class="dr"><span class="rk">··</span>
-       <div class="grow"><div class="nm">Auflösung wird geladen</div>
+    `<div class="dr"><span class="rk">··</span><div class="grow">
+       <div class="nm">Auflösung wird geladen</div>
        <div class="de">es wird automatisch weiter versucht</div></div></div>
      <button class="btn ghost" id="btnRevRetry" style="margin-top:12px">Nochmal versuchen</button>`;
   $("btnRevRetry").onclick = () => {
-    $("btnRevRetry").textContent = "Wird versucht …";
     solutionCache.delete(currentGameId + ":" + rid(n));
     refreshGame(true);
   };
-
   openSheet("sheet-reveal");
 }
 
-function buildRevealRows(){
-  const { sol, mine, theirs, opp, matchball } = revealCtx;
-
-  $("revList").innerHTML = sol.top.map((t, i) => {
-    const mp = pointsFor(mine[i], i, sol.top);
-    const op = pointsFor(theirs[i], i, sol.top);
-    const wert = sol.values?.[t] || "";
-    const cls = mp === 10 ? "p10" : mp === 5 ? "p5" : "";
-    return `<div class="dr ${mp ? "hit" : ""} ${matchball ? "pending" : ""}" data-rev="${i}"
-                 style="animation-delay:${matchball ? 0 : (0.05 + i * 0.09)}s">
-      <span class="rk">${zz(i+1)}</span>
-      <div class="grow revfull">
-        <div class="nm">${esc(t)}</div>
-        <div class="de">Du: ${esc(mine[i] || "—")} · ${esc(nameOf(opp).slice(0,7))}: ${esc(theirs[i] || "—")}</div>
-      </div>
-      <div class="grow revhold"><div class="nm" style="color:var(--dim)">— — —</div></div>
-      <span class="vv revfull">${esc(wert)}</span>
-      <span class="pt ${cls} revfull">+${mp}</span>
-    </div>`;
-  }).join("");
-}
-
-/* Punktestand bis einschließlich Platz k */
-function renderRunningScore(k){
-  const { sol, mine, theirs } = revealCtx;
-  let me_ = 0, op_ = 0;
-  for (let i = 0; i < k; i++){
-    me_ += pointsFor(mine[i], i, sol.top);
-    op_ += pointsFor(theirs[i], i, sol.top);
+/* ---------- Bedienung ---------- */
+$("btnSubmitList").onclick = async () => {
+  if (!currentGameId || !kEntwurf.every(Boolean)) return;
+  const n = currentGame.round ?? 0;
+  const btn = $("btnSubmitList");
+  btn.disabled = true; btn.textContent = "Wird abgegeben …";
+  try {
+    await updateDoc(gameRefOf(currentGameId), { [`answers.${rid(n)}.${me.uid}`]: kEntwurf.slice() });
+    await refreshGame(true);
+  } catch(e){
+    console.warn("Liste nicht abgegeben:", e.code || e);
+    btn.disabled = false; btn.textContent = "Liste abgeben";
   }
-  $("revMe").textContent = me_;
-  $("revOpp").textContent = op_;
-}
-
-function revealNext(){
-  if (!revealCtx || revealCtx.done) return;
-  const i = revealCtx.step;
-  const row = $("revList").querySelector(`[data-rev="${i}"]`);
-  if (row){
-    row.classList.remove("pending");
-    row.classList.add("just");
-    const pt = row.querySelector(".pt");
-    const pts = pt ? parseInt(pt.textContent.replace("+",""), 10) : 0;
-    if (pts === 10){ addShine(row); addSparks(row); }
-    popBadge(row, pts ? "+" + pts : "nicht dabei",
-      pts === 10 ? "var(--yellow)" : pts === 5 ? "var(--orange)" : "var(--ink-3)",
-      pts === 10 ? "var(--on-yellow)" : pts === 5 ? "var(--on-orange)" : "var(--muted)");
-  }
-  revealCtx.step = i + 1;
-
-  const fertig = revealCtx.step >= revealCtx.sol.top.length;
-  if (fertig) revealCtx.done = true;
-  renderRunningScore(revealCtx.step);
-
-  if (fertig) finishReveal();
-  else revealTimers.push(setTimeout(revealNext, 1150));
-}
-
-function revealAll(){
-  clearRevealTimers();
-  if (!revealCtx) return;
-  $("revList").querySelectorAll("[data-rev]").forEach(el => { el.classList.remove("pending"); el.classList.add("just"); });
-  revealCtx.step = revealCtx.sol.top.length;
-  revealCtx.done = true;
-  renderRunningScore(revealCtx.step);
-  finishReveal();
-}
-$("btnRevealAll").onclick = () => revealAll();
-
-/* Nach dem letzten Platz: Ablenker zeigen, Stand einordnen, Knopf frei. */
-function finishReveal(){
-  const { sol, mine, theirs, opp, matchball, vorMe, vorOpp, n } = revealCtx;
-  $("btnRevealAll").classList.add("hidden");
-  $("revNote").textContent = sol.note || "";
-
-  if (matchball){
-    const mp = scoreOf(mine, sol.top), op = scoreOf(theirs, sol.top);
-    const me_ = vorMe  + (mp > op ? 1 : 0);
-    const op_ = vorOpp + (op > mp ? 1 : 0);
-    const d = $("revDecide");
-    if (me_ >= 3 && op_ < 3){
-      d.textContent = "Damit steht dein Sieg fest.";
-      d.classList.remove("hidden");
-    } else if (op_ >= 3 && me_ < 3){
-      d.textContent = `Damit geht das Spiel an ${nameOf(opp)}.`;
-      d.classList.remove("hidden");
-    } else if (mp === op){
-      d.textContent = "Unentschieden — es bleibt offen.";
-      d.classList.remove("hidden");
-    } else {
-      d.textContent = "Noch nicht entschieden.";
-      d.classList.remove("hidden");
-    }
-  }
-
-  updateNextButton(!!revealCtx?.iAmReady);
-}
-
-/* Letzte Rückfallebene. Wartet man länger als zwanzig Sekunden auf den
-   anderen, wird der Knopf wieder anfassbar und stößt alles erneut an.
-   Damit kann kein Zustand entstehen, aus dem man nicht mehr herauskommt. */
-let hakelTimer = null;
-let hakelFuer = null;
-let stufenWache = null;
-function hakelWache(btnId, kennung){
-  /* Nicht bei jedem Neuzeichnen neu starten. Der Wachhund zeichnet alle
-     drei Sekunden neu — damit hätte der Zeitgeber die zwanzig Sekunden
-     nie erreicht und der Notausgang wäre nie aufgegangen. */
-  if (hakelFuer === kennung && hakelTimer) return;
-  hakelFuer = kennung;
-  clearTimeout(hakelTimer);
-  hakelTimer = setTimeout(() => {
-    const b = $(btnId);
-    if (!b || !b.disabled) return;
-    // Nur wieder freigeben — der vorhandene Klick-Handler schreibt die
-    // Bereitschaft ohnehin erneut und stößt damit alles an.
-    b.disabled = false;
-    b.textContent = "Nochmal versuchen";
-    hakelTimer = null;
-  }, 20000);
-}
-
-function updateNextButton(iAmReady){
-  const b = $("btnNextRound");
-  const { n, opp, done } = revealCtx || {};
-  /* Die Bereitschaft gehört zur Runde, nicht zum Knopf. Vorher stand sie
-     in dataset.ready und blieb über den Rundenwechsel hinweg erhalten —
-     ab Runde 2 hielt der Knopf beide für längst bereit, sperrte sich mit
-     „Warte auf …" und niemand konnte mehr drücken. */
-  if (revealCtx) revealCtx.iAmReady = !!iAmReady;
-
-  if (!done){
-    b.disabled = true;
-    b.textContent = "Die Auflösung läuft …";
-    /* Absicherung für das stufenweise Aufdecken: Wird die App währenddessen
-       in den Hintergrund geschoben, drosselt der Browser die Zeitgeber und
-       die Abfolge käme nie ans Ende — der Knopf bliebe für immer gesperrt.
-       Nach acht Sekunden wird sie deshalb notfalls von Hand beendet. */
-    if (stufenWache !== n){
-      stufenWache = n;
-      setTimeout(() => {
-        if (revealCtx && revealCtx.n === n && !revealCtx.done) revealAll();
-      }, 8000);
-    }
-    return;
-  }
-  const last = n + 1 >= roundCount();
-  if (iAmReady){
-    b.disabled = true;
-    b.textContent = `Warte auf ${nameOf(opp)} …`;
-    hakelWache("btnNextRound", "rev:" + n);
-  } else {
-    clearTimeout(hakelTimer); hakelTimer = null; hakelFuer = null;
-    b.disabled = false;
-    b.textContent = last ? "Endstand ansehen" : "Weiter zu Runde " + (n + 2);
-  }
-}
+};
 
 $("btnNextRound").onclick = async () => {
   if (!currentGameId) return;
   const n = currentGame.round ?? 0;
-  const b = $("btnNextRound"); b.disabled = true;
+  const b = $("btnNextRound");
+  b.disabled = true; b.textContent = "…";
   try {
     await updateDoc(gameRefOf(currentGameId), { [`ready.${rid(n)}.${me.uid}`]: true });
     await refreshGame(true);
   } catch(e){
     console.warn("Bereitschaft nicht gespeichert:", e.code || e);
     b.disabled = false;
+    b.textContent = "Nochmal versuchen";
   }
 };
 
@@ -4467,8 +4291,6 @@ $("btnRematch").onclick = async () => {
 
 async function leaveGame(){
   setWarten(false);
-  clearRevealTimers();
-  revealKey = null; revealCtx = null;
   altPickCand = null; altPickSlot = null; altRound = -1; altSolCache = null;
   altSeen = 0; altBusy = false; alleSheetsZu();
   if (unsubGame){ unsubGame(); unsubGame = null; }
@@ -4476,7 +4298,7 @@ async function leaveGame(){
   sideEffectGuard = new Set();
   versucheAm.clear();
   solutionCache.clear();
-  draft = []; draftRound = -1;
+  kEntwurf = []; kEntwurfRunde = -1;
   try { await updateDoc(userRef(me.uid), { [ACTIVE]: null }); } catch(_){}
   userCache.clear();
   show("screen-home");
@@ -5322,7 +5144,7 @@ async function enterActiveAlt(gid){
   if (currentGameId !== gid || (currentGame?.round ?? 0) !== n) return;
   altSolCache = sol;
   if (!sol){
-    zeigeLadefehler(n);
+    kLadefehler(n);
     setTimeout(() => refreshGame(true), 1500);
     return;
   }
@@ -5579,9 +5401,7 @@ function renderAltDone(n, sol){
   if (ready[me.uid]){
     b2.disabled = true;
     b2.textContent = `Warte auf ${nameOf(opp)} …`;
-    hakelWache("btnAltNext", "alt:" + n);
   } else {
-    clearTimeout(hakelTimer); hakelTimer = null; hakelFuer = null;
     b2.disabled = false;
     b2.textContent = last ? "Endstand" : "Nächste Runde";
   }
