@@ -1953,8 +1953,6 @@ let sideEffectGuard = new Set();
 let pendingPhoto = null;
 const userCache = new Map();
 const solutionCache = new Map();   // "gid:r0" → { top:[…], note:"" }
-let draft = [];                    // aktuell gesetzte Plätze der laufenden Runde
-let draftRound = -1;
 
 /* ══════════════════════════════════════════════════════════════
    4) Anmeldung
@@ -3649,7 +3647,7 @@ function watchGame(gid){
   if (unsubGame) unsubGame();
   currentGameId = gid;
   lastSnapAt = Date.now();
-  draftRound = -1;
+  kEntwurfRunde = -1;
 
   /* Kein Filter auf hasPendingWrites mehr. Der war wahr, solange ein
      eigener Schreibvorgang noch nicht bestätigt war — und verwarf in
@@ -3691,9 +3689,6 @@ async function handleGame(gid, daten){
   if (letztesSpiel !== gid || letzteRunde !== runde){
     letztesSpiel = gid;
     letzteRunde = runde;
-    clearRevealTimers();
-    revealKey = null;
-    revealCtx = null;
     altSeen = 0;
     altBusy = false;
     alleSheetsZu();
@@ -3798,6 +3793,36 @@ setInterval(() => {
   refreshGame();
 }, 1500);
 
+/* ---------- Lösung nachladen ----------
+   Die Regel gibt die Lösung erst frei, wenn beide Antworten auf dem
+   Server liegen. Kommt der Schnappschuss einen Wimpernschlag früher an
+   als die Freigabe greift, scheitert der erste Versuch — deshalb hier
+   kurze Abstände statt der trägen Standardschleife. Kein gemerkter
+   Zustand: Der Zwischenspeicher hält nur fertige Lösungen, nie einen
+   Fehlversuch. */
+async function loadSolution(gid, n){
+  const ck = gid + ":" + rid(n);
+  if (solutionCache.has(ck)) return solutionCache.get(ck);
+
+  const ref = doc(db, GAMES, gid, "secrets", rid(n));
+  const pausen = [0, 120, 200, 320, 500, 800, 1200, 1800];
+  let letzterFehler = null;
+  for (const ms of pausen){
+    if (ms) await sleep(ms);
+    try {
+      const s = await getDoc(ref);
+      if (s.exists()){
+        const d = s.data();
+        solutionCache.set(ck, d);
+        return d;
+      }
+      letzterFehler = "Dokument secrets/" + rid(n) + " existiert nicht";
+    } catch(e){ letzterFehler = e.code || e.message || String(e); }
+  }
+  console.warn(`Lösung für Runde ${n+1} nicht lesbar:`, letzterFehler);
+  return null;
+}
+
 /* ---------- Punkte ---------- */
 function pointsFor(pick, idx, top){
   if (!pick) return 0;
@@ -3811,6 +3836,30 @@ function scoreOf(list, top){
   return (list || []).reduce((sum, pick, i) => sum + pointsFor(pick, i, top), 0);
 }
 const norm = s => String(s ?? "").toLowerCase().replace(/\s+/g," ").trim();
+
+/* Ausgang einer bereits gespielten Runde — allein aus dem Spieldokument
+   abgeleitet: aus der Lösung, wenn sie im Zwischenspeicher liegt, sonst
+   aus den gespeicherten Punkten. Nichts wird gemerkt, der Aufruf ist
+   beliebig oft wiederholbar. Gibt "me", "opp", "draw" oder null zurück,
+   wenn die Runde (noch) nicht bewertbar ist. */
+function roundOutcome(i){
+  const g = currentGame;
+  if (!g) return null;
+  const opp = oppUid();
+  const key = rid(i);
+  let mp, op;
+  const sol = solutionCache.get(currentGameId + ":" + key);
+  const a = g.answers?.[key] || {};
+  if (sol && a[me.uid] && a[opp]){
+    mp = scoreOf(a[me.uid], sol.top);
+    op = scoreOf(a[opp], sol.top);
+  } else {
+    mp = g.scores?.[key]?.[me.uid];
+    op = g.scores?.[key]?.[opp];
+    if (mp === undefined || op === undefined) return null;
+  }
+  return mp > op ? "me" : op > mp ? "opp" : "draw";
+}
 
 /* ══════════════════════════════════════════════════════════════
    Klassik — neu gebaut
@@ -4242,8 +4291,6 @@ $("btnRematch").onclick = async () => {
 
 async function leaveGame(){
   setWarten(false);
-  clearRevealTimers();
-  revealKey = null; revealCtx = null;
   altPickCand = null; altPickSlot = null; altRound = -1; altSolCache = null;
   altSeen = 0; altBusy = false; alleSheetsZu();
   if (unsubGame){ unsubGame(); unsubGame = null; }
@@ -4251,7 +4298,7 @@ async function leaveGame(){
   sideEffectGuard = new Set();
   versucheAm.clear();
   solutionCache.clear();
-  draft = []; draftRound = -1;
+  kEntwurf = []; kEntwurfRunde = -1;
   try { await updateDoc(userRef(me.uid), { [ACTIVE]: null }); } catch(_){}
   userCache.clear();
   show("screen-home");
@@ -5097,7 +5144,7 @@ async function enterActiveAlt(gid){
   if (currentGameId !== gid || (currentGame?.round ?? 0) !== n) return;
   altSolCache = sol;
   if (!sol){
-    zeigeLadefehler(n);
+    kLadefehler(n);
     setTimeout(() => refreshGame(true), 1500);
     return;
   }
@@ -5354,9 +5401,7 @@ function renderAltDone(n, sol){
   if (ready[me.uid]){
     b2.disabled = true;
     b2.textContent = `Warte auf ${nameOf(opp)} …`;
-    hakelWache("btnAltNext", "alt:" + n);
   } else {
-    clearTimeout(hakelTimer); hakelTimer = null; hakelFuer = null;
     b2.disabled = false;
     b2.textContent = last ? "Endstand" : "Nächste Runde";
   }
