@@ -37,10 +37,17 @@ function baueNachricht(kind, from, extra = {}) {
       return { title: "Runde beendet", body: `${from} hat getippt. Schau dir das Ergebnis an.`, tag: "game" };
 
     /* ---------- List Duell ----------
-       Bewusst nur die Herausforderung. Meldungen zu jedem Zug und jedem
-       Spielende waren mehr Störung als Nutzen. */
+       Bewusst nur Herausforderung und Freundschaftsanfrage. Meldungen zu
+       jedem Zug und jedem Spielende waren mehr Störung als Nutzen; diese
+       beiden warten dagegen auf eine Antwort. */
     case "listchallenge":
       return { title: "Herausforderung", body: `${from} fordert dich heraus.`, tag: "listchallenge" };
+    case "listfriendreq":
+      return {
+        title: "Freundschaftsanfrage",
+        body: `${from} möchte dich als Freund hinzufügen.`,
+        tag: "listfriendreq"
+      };
 
     /* ---------- Selbsttest ---------- */
     case "test":

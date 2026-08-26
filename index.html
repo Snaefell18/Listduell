@@ -256,7 +256,7 @@
   .slots{position:relative;margin-top:14px;display:block}
   .slot{
     display:flex;align-items:center;gap:14px;width:100%;text-align:left;
-    height:46px;padding:0;background:transparent;border:0;
+    height:42px;padding:0;background:transparent;border:0;
     border-bottom:1px solid var(--line);border-radius:0;
     position:relative;overflow:hidden;color:var(--paper)
   }
@@ -292,10 +292,10 @@
   .slot.filled:not(.opp) .by{background:var(--yellow);color:var(--on-yellow)}
   .opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
   .chip{
-    display:inline-flex;align-items:center;min-height:42px;
+    display:inline-flex;align-items:center;min-height:36px;
     background:transparent;border:1.5px solid var(--line-2);border-radius:0;
-    padding:0 11px;color:var(--paper);
-    font:600 12.5px var(--body);text-transform:uppercase;letter-spacing:0;
+    padding:0 10px;color:var(--paper);
+    font:600 12px var(--body);text-transform:uppercase;letter-spacing:0;
     transition:transform .12s ease
   }
   .chip.used{opacity:.28;text-decoration:line-through}
@@ -368,8 +368,13 @@
   /* ══════════════════════════════════════════════════════════
      SPIELBRETT — beide Modi teilen sich diese Bausteine
      ══════════════════════════════════════════════════════════ */
+  /* Das Brett ist genau einen Bildschirm hoch. Frage, Antwortplätze und
+     Knopf sind damit immer gleichzeitig sichtbar; muss etwas weichen,
+     ist es die Kandidatenliste — und zwar in sich, nicht die ganze Seite.
+     Vorher wuchs die Seite über den Bildschirm hinaus und die klebende
+     Fußleiste legte sich über die letzten Plätze. */
   .board{
-    display:flex;flex-direction:column;min-height:100dvh;
+    display:flex;flex-direction:column;height:100dvh;overflow:hidden;
     margin:
       calc(-22px - env(safe-area-inset-top))
       calc(-18px - env(safe-area-inset-right))
@@ -378,17 +383,22 @@
   }
   .board-head{
     background:var(--deep);flex:0 0 auto;
-    padding:max(18px, env(safe-area-inset-top)) 20px 16px
+    padding:max(14px, env(safe-area-inset-top)) 20px 12px
   }
-  .board-mid{padding:10px 20px 0;flex:0 0 auto}
-  .board-rows{flex:1 1 auto;padding:8px 20px 10px;position:relative}
+  .board-mid{padding:8px 20px 0;flex:0 0 auto}
+  /* Behält seine volle Höhe. Die Kandidatenleiste unten nimmt nur den
+     Rest ein (flex-basis 0) — erst wenn die auf ihrer Mindesthöhe steht,
+     gibt hier überhaupt etwas nach, und dann in sich scrollend. */
+  .board-rows{flex:0 1 auto;min-height:0;overflow-y:auto;padding:6px 20px 8px;position:relative}
   /* Die Aktion klebt unten am Bildschirmrand. Reicht der Platz nicht,
      scrollt der Inhalt darüber weg — der Knopf bleibt erreichbar. */
   .board-foot{
-    background:var(--deep);flex:0 0 auto;
-    position:sticky;bottom:0;z-index:5;
-    padding:10px 20px max(16px, calc(4px + env(safe-area-inset-bottom)))
+    background:var(--deep);flex:1 1 auto;min-height:0;
+    display:flex;flex-direction:column;justify-content:flex-end;z-index:5;
+    padding:8px 20px max(14px, calc(4px + env(safe-area-inset-bottom)))
   }
+  .board-foot .btn,.board-foot .link{flex:0 0 auto}
+  .board-foot .link{padding:8px 0;min-height:36px}
 
   .bar-line{display:flex;align-items:center;gap:8px}
   .bar-line .mode{
@@ -401,12 +411,12 @@
   }
 
   /* Punktestand: zwei große Zahlen, kein Kreis, kein Ring */
-  .scoreline{display:flex;align-items:flex-end;gap:10px;margin-top:14px}
+  .scoreline{display:flex;align-items:flex-end;gap:10px;margin-top:10px}
   .scoreline .side{flex:1;min-width:0}
   .scoreline .side.right{text-align:right}
   .scoreline .numwrap{position:relative;display:inline-block}
   .scoreline .num{
-    font:900 52px/.86 var(--display);letter-spacing:-.045em;color:var(--yellow)
+    font:900 40px/.86 var(--display);letter-spacing:-.045em;color:var(--yellow)
   }
   .scoreline .side.right .num{color:var(--paper)}
   .scoreline .num.bump{animation:tickBump .55s cubic-bezier(.2,1.4,.3,1) both}
@@ -442,10 +452,10 @@
   @keyframes pip{0%,100%{opacity:1}50%{opacity:.25}}
   @keyframes markIn{0%{opacity:0;transform:translateX(26px)}100%{opacity:1;transform:none}}
   @keyframes markInRight{0%{opacity:0;transform:translateX(-26px)}100%{opacity:1;transform:none}}
-  .scoreline .colon{font:900 24px/1 var(--display);color:var(--dim);padding-bottom:20px}
+  .scoreline .colon{font:900 20px/1 var(--display);color:var(--dim);padding-bottom:16px}
 
   .turnbar{
-    margin-top:14px;padding:9px 12px;text-align:center;
+    margin-top:10px;padding:7px 12px;text-align:center;
     font:700 11px var(--body);letter-spacing:.18em;text-transform:uppercase;
     background:var(--orange);color:var(--on-orange)
   }
@@ -457,11 +467,12 @@
     color:var(--muted);margin-top:5px
   }
 
-  /* Die Kandidaten bekommen so viel Platz, wie sie brauchen — verschachteltes
-     Scrollen in einem kleinen Kasten ist mühsamer, als wenn im Notfall die
-     ganze Seite scrollt. Der Knopf bleibt durch die klebende Fußleiste
-     ohnehin erreichbar. Die Platzzeilen geben den Raum dafür ab. */
-  .pool{display:flex;flex-wrap:wrap;gap:5px;min-height:38px}
+  /* Die Kandidaten sind der einzige Teil, der nachgibt: Sie schrumpfen
+     zuerst und scrollen notfalls in sich. Alles andere bleibt stehen. */
+  .pool{
+    display:flex;flex-wrap:wrap;align-content:flex-start;gap:4px;
+    flex:1 1 0;min-height:36px;overflow-y:auto;overscroll-behavior:contain
+  }
 
   /* ══════════════════════════════════════════════════════════
      RÜCKMELDUNG — Punkte entstehen dort, wo sie entstehen
@@ -584,26 +595,42 @@
   /* ══════════════════════════════════════════════════════════
      KEYFRAMES
      ══════════════════════════════════════════════════════════ */
-  /* Kleine Displays: Kopf und Frage geben nach, damit die Platzzeilen
-     nicht hinter die Kandidatenleiste rutschen. */
-  /* Kleine Displays: Alles außer den Platzzeilen und den Kandidaten gibt
-     Höhe ab. Die Platzzeilen sind das Spielfeld und bleiben ganz sichtbar,
-     die Kandidatenleiste scrollt notfalls in sich. */
+  /* Kleine Displays: Alles außer den Platzzeilen gibt weiter Höhe ab.
+     Die Platzzeilen sind das Spielfeld und bleiben ganz sichtbar; die
+     Kandidatenleiste schrumpft und scrollt notfalls in sich. Eine feste
+     max-height braucht sie nicht mehr — das regelt jetzt der Schrumpf-
+     faktor im Brett. */
   @media (max-height:740px){
-    .scoreline .num{font-size:40px}
-    .scoreline .colon{font-size:18px;padding-bottom:12px}
-    .scoreline{margin-top:8px}
+    .scoreline .num{font-size:32px}
+    .scoreline .colon{font-size:17px;padding-bottom:11px}
+    .scoreline{margin-top:7px}
     .wholine{margin-top:4px}
     .qhead{font-size:16px;line-height:1.14}
     .qsub{margin-top:3px;font-size:10.5px}
-    .board-mid{padding:8px 20px 0}
-    .board-head{padding-bottom:10px}
-    .board-rows{padding:6px 20px 8px}
-    .slot{height:42px}
-    .chip{min-height:38px;font-size:12px;padding:0 10px}
-    .pool{max-height:132px;overflow-y:auto}
-    .board-foot{padding-top:8px}
-    .btn{padding:14px 18px}
+    .board-mid{padding:6px 20px 0}
+    .board-head{padding-bottom:9px}
+    .board-rows{padding:5px 20px 6px}
+    .turnbar{margin-top:8px;padding:6px 12px}
+    .slot{height:38px}
+    .chip{min-height:34px;font-size:11.5px;padding:0 9px}
+    .board-foot{padding-top:7px}
+    .btn{padding:13px 18px}
+    .board-foot .link{padding:6px 0;min-height:32px}
+  }
+
+  /* Sehr kleine Displays (etwa iPhone SE, 360×640): auch die Platzzeilen
+     rücken zusammen, damit alle fünf ganz sichtbar bleiben. */
+  @media (max-height:670px){
+    .scoreline .num{font-size:28px}
+    .scoreline .colon{font-size:15px;padding-bottom:9px}
+    .qhead{font-size:15px}
+    .slot{height:34px}
+    .slot .rk{font-size:20px;width:26px}
+    .slot .val{font-size:15px}
+    .chip{min-height:31px;font-size:11px;padding:0 8px}
+    .turnbar{margin-top:6px;padding:5px 10px;font-size:10px}
+    .board-foot .link{padding:4px 0;min-height:28px}
+    .btn{padding:12px 18px}
   }
 
   @keyframes popRise{0%{opacity:0;transform:translate(-50%,6px) scale(.4) rotate(-8deg)}30%{opacity:1;transform:translate(-50%,-14px) scale(1.35) rotate(3deg)}55%{transform:translate(-50%,-20px) scale(1)}100%{opacity:0;transform:translate(-50%,-58px) scale(.9)}}
@@ -1109,6 +1136,11 @@
       <div id="invitesList" style="margin-top:10px"></div>
     </div>
 
+    <div id="freqCard" class="card hidden" style="border-color:rgba(255,201,60,.45);background:rgba(255,201,60,.07)">
+      <div class="eyebrow" style="color:var(--yellow)" id="freqLabel">Freundschaftsanfrage</div>
+      <div id="freqList" style="margin-top:10px"></div>
+    </div>
+
     <div class="card">
       <div class="row" style="justify-content:space-between">
         <h3>Freunde</h3>
@@ -1117,7 +1149,7 @@
       <div id="friendList" style="margin-top:8px"></div>
       <div class="row" style="margin-top:14px">
         <input type="text" id="addUsername" placeholder="Benutzername" autocomplete="off" />
-        <button class="btn sm primary" id="btnAddFriend" style="flex:0 0 auto">Hinzufügen</button>
+        <button class="btn sm primary" id="btnAddFriend" style="flex:0 0 auto">Anfragen</button>
       </div>
     </div>
 
@@ -1822,6 +1854,7 @@ const LISTS_ENDPOINT = "/api/lists";
 /* Getrennte Ablagen, damit sich die Spiele nicht in die Quere kommen */
 const GAMES     = "listgames";                 // statt "games"
 const INVITES   = "listinvites";               // statt "invites"
+const FRIENDREQS = "listfriendreqs";           // offene Freundschaftsanfragen
 const ACTIVE    = "activeListGameId";          // statt "activeGameId"
 const MODES = {
   klassik: { label:"Klassik",     rounds:5, kurz:"Klassik" },
@@ -1950,7 +1983,7 @@ function shuffle(arr){
    ══════════════════════════════════════════════════════════════ */
 let me = null;
 let profile = null;
-let unsubProfile = null, unsubInvites = null, unsubGame = null;
+let unsubProfile = null, unsubInvites = null, unsubGame = null, unsubFriendReqs = null;
 let currentGameId = null, currentGame = null;
 let sideEffectGuard = new Set();
 let pendingPhoto = null;
@@ -2034,6 +2067,7 @@ function cleanup(){
   alleSheetsZu();
   if (unsubProfile){ unsubProfile(); unsubProfile = null; }
   if (unsubInvites){ unsubInvites(); unsubInvites = null; }
+  if (unsubFriendReqs){ unsubFriendReqs(); unsubFriendReqs = null; }
   if (unsubGame){ unsubGame(); unsubGame = null; }
   currentGameId = currentGame = null;
   sideEffectGuard = new Set();
@@ -2186,6 +2220,12 @@ function startSession(seed){
     renderInvites(snap.docs.map(d => ({ id:d.id, ...d.data() })));
   }, err => {
     toast("Einladungen laden nicht: " + (err.code || err.message));
+  });
+
+  unsubFriendReqs = onSnapshot(collection(db,"users",me.uid,FRIENDREQS), snap => {
+    renderFriendReqs(snap.docs.map(d => ({ id:d.id, ...d.data() })));
+  }, err => {
+    console.warn("Freundschaftsanfragen laden nicht:", err.code || err.message);
   });
 }
 
@@ -2886,7 +2926,7 @@ async function loadFriends(){
   const ids = profile.friends || [];
   $("friendCount").textContent = ids.length;
   const list = $("friendList");
-  if (!ids.length){ list.innerHTML = `<div class="empty">Noch niemand hier. Füge unten einen Benutzernamen hinzu.</div>`; return; }
+  if (!ids.length){ list.innerHTML = `<div class="empty">Noch niemand hier. Frag unten jemanden über den Benutzernamen an.</div>`; return; }
 
   const users = (await Promise.all(ids.map(getUser))).filter(Boolean);
   const busy = !!profile[ACTIVE];
@@ -2911,6 +2951,19 @@ async function loadFriends(){
   list.querySelectorAll("[data-profile]").forEach(b => b.onclick = () => openFriend(b.dataset.profile));
 }
 
+/* ---------- Freundschaftsanfragen ----------
+   Niemand landet mehr ungefragt in einer fremden Freundesliste. Die
+   Anfrage liegt als Dokument unter users/{ziel}/listfriendreqs/{absender}
+   — dieselbe Bauweise wie die Herausforderungen. Erst das Ja auf der
+   Gegenseite trägt beide ineinander ein.
+
+   Die Anfrage-Kennung ist die UID des Absenders. Damit kann derselbe
+   Absender nicht zweimal in der Liste stehen, und Annehmen wie Ablehnen
+   löschen genau ein Dokument. */
+function freqRef(zielUid, vonUid){
+  return doc(db, "users", zielUid, FRIENDREQS, vonUid);
+}
+
 $("btnAddFriend").onclick = async () => {
   const raw = $("addUsername").value.trim().toLowerCase();
   if (!raw) return;
@@ -2921,13 +2974,84 @@ $("btnAddFriend").onclick = async () => {
     if (!s.exists()){ toast("Diesen Benutzernamen gibt es nicht."); return; }
     const fuid = s.data().uid;
     if ((profile.friends||[]).includes(fuid)){ toast("Ihr seid schon Freunde."); return; }
-    await updateDoc(userRef(me.uid), { friends: arrayUnion(fuid) });
-    await updateDoc(userRef(fuid),   { friends: arrayUnion(me.uid) });
+
+    /* Hat die andere Seite mir bereits geschrieben, ist das Ja hiermit
+       gegeben — zwei offene Anfragen in beide Richtungen wären unsinnig. */
+    const gegen = await getDoc(freqRef(me.uid, fuid)).catch(() => null);
+    if (gegen?.exists()){
+      await acceptFriendReq(fuid);
+      $("addUsername").value = "";
+      return;
+    }
+
+    const meine = await getDoc(freqRef(fuid, me.uid)).catch(() => null);
+    if (meine?.exists()){ toast("Deine Anfrage läuft schon."); return; }
+
+    await setDoc(freqRef(fuid, me.uid), {
+      from: me.uid,
+      fromName: profile.username,
+      fromPhoto: profile.photo || "",
+      fromBadge: profile.badge || "",
+      fromFrame: profile.frame || "",
+      createdAt: serverTimestamp()
+    });
+    push(fuid, "listfriendreq");
     $("addUsername").value = "";
-    toast("Freund hinzugefügt.");
+    toast("Anfrage verschickt.");
   } catch(e){ toast("Fehler: " + (e.code || e.message)); }
   finally { btn.disabled = false; }
 };
+
+function renderFriendReqs(reqs){
+  const card = $("freqCard"), list = $("freqList");
+  if (!reqs.length){ card.classList.add("hidden"); return; }
+  card.classList.remove("hidden");
+  $("freqLabel").textContent = reqs.length === 1
+    ? "Freundschaftsanfrage"
+    : `${reqs.length} Freundschaftsanfragen`;
+  list.innerHTML = reqs.map(r => `
+    <div class="inv">
+      <div class="row" style="gap:12px">
+        ${avaHTML({ photo: r.fromPhoto, badge: r.fromBadge, frame: r.fromFrame })}
+        <div class="grow">
+          <div class="name">${esc(r.fromName || "Jemand")}</div>
+          <div class="sub">möchte dich als Freund</div>
+        </div>
+        <button class="btn sm primary" data-freqok="${esc(r.id)}" style="flex:0 0 auto">Ja</button>
+        <button class="btn sm ghost" data-freqno="${esc(r.id)}" style="flex:0 0 auto">Nein</button>
+      </div>
+    </div>`).join("");
+  list.querySelectorAll("[data-freqok]").forEach(b => b.onclick = () => acceptFriendReq(b.dataset.freqok, b));
+  list.querySelectorAll("[data-freqno]").forEach(b => b.onclick = () => declineFriendReq(b.dataset.freqno, b));
+}
+
+async function acceptFriendReq(vonUid, btn){
+  if (btn){ btn.disabled = true; btn.textContent = "…"; }
+  try {
+    await updateDoc(userRef(me.uid), { friends: arrayUnion(vonUid) });
+    await updateDoc(userRef(vonUid),  { friends: arrayUnion(me.uid) });
+    /* Zum Schluss löschen: Bleibt die Anfrage nach einem Abbruch stehen,
+       kann man es einfach noch einmal drücken. Andersherum wäre sie weg
+       und die Freundschaft nie zustande gekommen. */
+    await deleteDoc(freqRef(me.uid, vonUid)).catch(() => {});
+    userCache.delete(vonUid);
+    toast("Freund hinzugefügt.");
+  } catch(e){
+    toast("Fehler: " + (e.code || e.message));
+    if (btn){ btn.disabled = false; btn.textContent = "Ja"; }
+  }
+}
+
+async function declineFriendReq(vonUid, btn){
+  if (btn) btn.disabled = true;
+  try {
+    await deleteDoc(freqRef(me.uid, vonUid));
+    toast("Anfrage abgelehnt.");
+  } catch(e){
+    toast("Fehler: " + (e.code || e.message));
+    if (btn) btn.disabled = false;
+  }
+}
 
 let friendView = null;
 function dateDE(ts){
@@ -3992,11 +4116,14 @@ function kBrett(n, gesperrt, statusText){
          <span class="rk">${zz(i+1)}</span><span class="val">offen</span>
        </button>`).join("");
 
-  $("optBox").innerHTML = (r.options || []).map(o => {
-    const benutzt = kEntwurf.includes(o);
-    return `<button class="chip ${benutzt ? "used" : ""}" data-opt="${esc(o)}"
-              ${benutzt || gesperrt ? "disabled" : ""}>${esc(o)}</button>`;
-  }).join("");
+  /* Gesetzte Kandidaten verschwinden aus der Liste, statt durchgestrichen
+     stehen zu bleiben — sie stehen ja eine Zeile weiter oben im Platz.
+     Die Liste wird dadurch mit jedem Zug kürzer statt länger. Der Modus
+     Abwechselnd macht das seit jeher so. */
+  const offen = (r.options || []).filter(o => !kEntwurf.includes(o));
+  $("optBox").innerHTML = offen.map(o =>
+    `<button class="chip" data-opt="${esc(o)}" ${gesperrt ? "disabled" : ""}>${esc(o)}</button>`
+  ).join("");
 
   if (!gesperrt){
     $("slotBox").querySelectorAll("[data-slot]").forEach(b => b.onclick = () => {
