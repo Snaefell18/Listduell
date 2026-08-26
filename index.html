@@ -467,8 +467,8 @@
     color:var(--muted);margin-top:5px
   }
 
-  /* Die Kandidaten sind der einzige Teil, der nachgibt: Sie bekommen den
-     Rest der Höhe und scrollen notfalls in sich. Alles andere bleibt. */
+  /* Die Kandidaten sind der einzige Teil, der nachgibt: Sie schrumpfen
+     zuerst und scrollen notfalls in sich. Alles andere bleibt stehen. */
   .pool{
     display:flex;flex-wrap:wrap;align-content:flex-start;gap:4px;
     flex:1 1 0;min-height:36px;overflow-y:auto;overscroll-behavior:contain
@@ -598,8 +598,8 @@
   /* Kleine Displays: Alles außer den Platzzeilen gibt weiter Höhe ab.
      Die Platzzeilen sind das Spielfeld und bleiben ganz sichtbar; die
      Kandidatenleiste schrumpft und scrollt notfalls in sich. Eine feste
-     max-height braucht sie nicht mehr — das regelt jetzt die Verteilung
-     im Brett. */
+     max-height braucht sie nicht mehr — das regelt jetzt der Schrumpf-
+     faktor im Brett. */
   @media (max-height:740px){
     .scoreline .num{font-size:32px}
     .scoreline .colon{font-size:17px;padding-bottom:11px}
@@ -1136,6 +1136,11 @@
       <div id="invitesList" style="margin-top:10px"></div>
     </div>
 
+    <div id="freqCard" class="card hidden" style="border-color:rgba(255,201,60,.45);background:rgba(255,201,60,.07)">
+      <div class="eyebrow" style="color:var(--yellow)" id="freqLabel">Freundschaftsanfrage</div>
+      <div id="freqList" style="margin-top:10px"></div>
+    </div>
+
     <div class="card">
       <div class="row" style="justify-content:space-between">
         <h3>Freunde</h3>
@@ -1144,7 +1149,7 @@
       <div id="friendList" style="margin-top:8px"></div>
       <div class="row" style="margin-top:14px">
         <input type="text" id="addUsername" placeholder="Benutzername" autocomplete="off" />
-        <button class="btn sm primary" id="btnAddFriend" style="flex:0 0 auto">Hinzufügen</button>
+        <button class="btn sm primary" id="btnAddFriend" style="flex:0 0 auto">Anfragen</button>
       </div>
     </div>
 
@@ -1849,6 +1854,7 @@ const LISTS_ENDPOINT = "/api/lists";
 /* Getrennte Ablagen, damit sich die Spiele nicht in die Quere kommen */
 const GAMES     = "listgames";                 // statt "games"
 const INVITES   = "listinvites";               // statt "invites"
+const FRIENDREQS = "listfriendreqs";           // offene Freundschaftsanfragen
 const ACTIVE    = "activeListGameId";          // statt "activeGameId"
 const MODES = {
   klassik: { label:"Klassik",     rounds:5, kurz:"Klassik" },
@@ -1977,7 +1983,7 @@ function shuffle(arr){
    ══════════════════════════════════════════════════════════════ */
 let me = null;
 let profile = null;
-let unsubProfile = null, unsubInvites = null, unsubGame = null;
+let unsubProfile = null, unsubInvites = null, unsubGame = null, unsubFriendReqs = null;
 let currentGameId = null, currentGame = null;
 let sideEffectGuard = new Set();
 let pendingPhoto = null;
@@ -2061,6 +2067,7 @@ function cleanup(){
   alleSheetsZu();
   if (unsubProfile){ unsubProfile(); unsubProfile = null; }
   if (unsubInvites){ unsubInvites(); unsubInvites = null; }
+  if (unsubFriendReqs){ unsubFriendReqs(); unsubFriendReqs = null; }
   if (unsubGame){ unsubGame(); unsubGame = null; }
   currentGameId = currentGame = null;
   sideEffectGuard = new Set();
@@ -2213,6 +2220,12 @@ function startSession(seed){
     renderInvites(snap.docs.map(d => ({ id:d.id, ...d.data() })));
   }, err => {
     toast("Einladungen laden nicht: " + (err.code || err.message));
+  });
+
+  unsubFriendReqs = onSnapshot(collection(db,"users",me.uid,FRIENDREQS), snap => {
+    renderFriendReqs(snap.docs.map(d => ({ id:d.id, ...d.data() })));
+  }, err => {
+    console.warn("Freundschaftsanfragen laden nicht:", err.code || err.message);
   });
 }
 
@@ -2913,7 +2926,7 @@ async function loadFriends(){
   const ids = profile.friends || [];
   $("friendCount").textContent = ids.length;
   const list = $("friendList");
-  if (!ids.length){ list.innerHTML = `<div class="empty">Noch niemand hier. Füge unten einen Benutzernamen hinzu.</div>`; return; }
+  if (!ids.length){ list.innerHTML = `<div class="empty">Noch niemand hier. Frag unten jemanden über den Benutzernamen an.</div>`; return; }
 
   const users = (await Promise.all(ids.map(getUser))).filter(Boolean);
   const busy = !!profile[ACTIVE];
@@ -2938,6 +2951,19 @@ async function loadFriends(){
   list.querySelectorAll("[data-profile]").forEach(b => b.onclick = () => openFriend(b.dataset.profile));
 }
 
+/* ---------- Freundschaftsanfragen ----------
+   Niemand landet mehr ungefragt in einer fremden Freundesliste. Die
+   Anfrage liegt als Dokument unter users/{ziel}/listfriendreqs/{absender}
+   — dieselbe Bauweise wie die Herausforderungen. Erst das Ja auf der
+   Gegenseite trägt beide ineinander ein.
+
+   Die Anfrage-Kennung ist die UID des Absenders. Damit kann derselbe
+   Absender nicht zweimal in der Liste stehen, und Annehmen wie Ablehnen
+   löschen genau ein Dokument. */
+function freqRef(zielUid, vonUid){
+  return doc(db, "users", zielUid, FRIENDREQS, vonUid);
+}
+
 $("btnAddFriend").onclick = async () => {
   const raw = $("addUsername").value.trim().toLowerCase();
   if (!raw) return;
@@ -2948,13 +2974,84 @@ $("btnAddFriend").onclick = async () => {
     if (!s.exists()){ toast("Diesen Benutzernamen gibt es nicht."); return; }
     const fuid = s.data().uid;
     if ((profile.friends||[]).includes(fuid)){ toast("Ihr seid schon Freunde."); return; }
-    await updateDoc(userRef(me.uid), { friends: arrayUnion(fuid) });
-    await updateDoc(userRef(fuid),   { friends: arrayUnion(me.uid) });
+
+    /* Hat die andere Seite mir bereits geschrieben, ist das Ja hiermit
+       gegeben — zwei offene Anfragen in beide Richtungen wären unsinnig. */
+    const gegen = await getDoc(freqRef(me.uid, fuid)).catch(() => null);
+    if (gegen?.exists()){
+      await acceptFriendReq(fuid);
+      $("addUsername").value = "";
+      return;
+    }
+
+    const meine = await getDoc(freqRef(fuid, me.uid)).catch(() => null);
+    if (meine?.exists()){ toast("Deine Anfrage läuft schon."); return; }
+
+    await setDoc(freqRef(fuid, me.uid), {
+      from: me.uid,
+      fromName: profile.username,
+      fromPhoto: profile.photo || "",
+      fromBadge: profile.badge || "",
+      fromFrame: profile.frame || "",
+      createdAt: serverTimestamp()
+    });
+    push(fuid, "listfriendreq");
     $("addUsername").value = "";
-    toast("Freund hinzugefügt.");
+    toast("Anfrage verschickt.");
   } catch(e){ toast("Fehler: " + (e.code || e.message)); }
   finally { btn.disabled = false; }
 };
+
+function renderFriendReqs(reqs){
+  const card = $("freqCard"), list = $("freqList");
+  if (!reqs.length){ card.classList.add("hidden"); return; }
+  card.classList.remove("hidden");
+  $("freqLabel").textContent = reqs.length === 1
+    ? "Freundschaftsanfrage"
+    : `${reqs.length} Freundschaftsanfragen`;
+  list.innerHTML = reqs.map(r => `
+    <div class="inv">
+      <div class="row" style="gap:12px">
+        ${avaHTML({ photo: r.fromPhoto, badge: r.fromBadge, frame: r.fromFrame })}
+        <div class="grow">
+          <div class="name">${esc(r.fromName || "Jemand")}</div>
+          <div class="sub">möchte dich als Freund</div>
+        </div>
+        <button class="btn sm primary" data-freqok="${esc(r.id)}" style="flex:0 0 auto">Ja</button>
+        <button class="btn sm ghost" data-freqno="${esc(r.id)}" style="flex:0 0 auto">Nein</button>
+      </div>
+    </div>`).join("");
+  list.querySelectorAll("[data-freqok]").forEach(b => b.onclick = () => acceptFriendReq(b.dataset.freqok, b));
+  list.querySelectorAll("[data-freqno]").forEach(b => b.onclick = () => declineFriendReq(b.dataset.freqno, b));
+}
+
+async function acceptFriendReq(vonUid, btn){
+  if (btn){ btn.disabled = true; btn.textContent = "…"; }
+  try {
+    await updateDoc(userRef(me.uid), { friends: arrayUnion(vonUid) });
+    await updateDoc(userRef(vonUid),  { friends: arrayUnion(me.uid) });
+    /* Zum Schluss löschen: Bleibt die Anfrage nach einem Abbruch stehen,
+       kann man es einfach noch einmal drücken. Andersherum wäre sie weg
+       und die Freundschaft nie zustande gekommen. */
+    await deleteDoc(freqRef(me.uid, vonUid)).catch(() => {});
+    userCache.delete(vonUid);
+    toast("Freund hinzugefügt.");
+  } catch(e){
+    toast("Fehler: " + (e.code || e.message));
+    if (btn){ btn.disabled = false; btn.textContent = "Ja"; }
+  }
+}
+
+async function declineFriendReq(vonUid, btn){
+  if (btn) btn.disabled = true;
+  try {
+    await deleteDoc(freqRef(me.uid, vonUid));
+    toast("Anfrage abgelehnt.");
+  } catch(e){
+    toast("Fehler: " + (e.code || e.message));
+    if (btn) btn.disabled = false;
+  }
+}
 
 let friendView = null;
 function dateDE(ts){

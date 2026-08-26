@@ -1,6 +1,15 @@
-/* Rauchprobe: schneidet den Klassik-Block aus index.html aus und ruft
-   kBrett / kAufloesung / roundOutcome mit einem nachgebauten Spieldokument
-   auf. Prüft ausschließlich, dass keine Bezeichner fehlen. */
+/* Rauchprobe: führt den Ablaufcode aus index.html in einem vm-Kontext mit
+   nachgebautem Browser und nachgebauter Datenbank aus.
+
+   Geprüft werden
+     · Klassik  — kBrett, kAufloesung, kLadefehler, roundOutcome gegen ein
+                  erfundenes Spieldokument (Matchball-Lage, Runde 3)
+     · Freunde  — dass eine Freundschaftsanfrage erst nach dem Ja beide
+                  Seiten einträgt und niemand ungefragt in einer fremden
+                  Liste landet
+
+   Es geht um fehlende Bezeichner und um die Schreibvorgänge, die dabei
+   herauskommen — nicht um Darstellung. */
 import fs from 'fs';
 import vm from 'vm';
 
@@ -20,7 +29,14 @@ function el(){
   const e = {
     textContent:'', innerHTML:'', value:'', disabled:false, hidden:false,
     dataset:{}, style:{},
-    classList:{ add(){}, remove(){}, toggle(){}, contains(){return false} },
+    klassen:new Set(),
+    classList:{
+      add(...c){ c.forEach(x => e.klassen.add(x)) },
+      remove(...c){ c.forEach(x => e.klassen.delete(x)) },
+      toggle(c, an){ const soll = an === undefined ? !e.klassen.has(c) : !!an;
+                     soll ? e.klassen.add(c) : e.klassen.delete(c) },
+      contains(c){ return e.klassen.has(c) }
+    },
     addEventListener(){}, removeEventListener(){}, appendChild(){}, remove(){},
     querySelectorAll(){ return [] }, querySelector(){ return el() },
     focus(){}, click(){}, setAttribute(){}, getAttribute(){return null},
@@ -29,6 +45,9 @@ function el(){
   return e;
 }
 const nodes = new Map();
+const knoten = id => doc.getElementById(id);   // legt bei Bedarf an
+const datenbank = new Map();   // pfad → daten
+const schreib = [];            // [art, pfad, daten]
 const doc = {
   getElementById: id => { if(!nodes.has(id)) nodes.set(id, el()); return nodes.get(id) },
   querySelector: () => el(), querySelectorAll: () => [],
@@ -52,8 +71,16 @@ const ctx = {
   onAuthStateChanged(){}, signInAnonymously: stub, signOut: stub,
   GoogleAuthProvider: stub, signInWithPopup: stub, signInWithRedirect: stub,
   getRedirectResult: () => Promise.resolve(null), updateProfile: stub,
-  doc: stub, getDoc: () => Promise.resolve({ exists:()=>false }),
-  setDoc: stub, updateDoc: () => Promise.resolve(), deleteDoc: stub,
+  /* Nachgebaute Datenbank: doc() merkt sich den Pfad, die Schreibvorgänge
+     landen in db.schreib und lassen sich hinterher nachlesen. */
+  doc: (_db, ...teile) => ({ pfad: teile.join("/") }),
+  getDoc: ref => Promise.resolve({
+    exists: () => datenbank.has(ref?.pfad),
+    data:   () => datenbank.get(ref?.pfad)
+  }),
+  setDoc: (ref, d) => { schreib.push(["set", ref.pfad, d]); datenbank.set(ref.pfad, d); return Promise.resolve() },
+  updateDoc: (ref, d) => { schreib.push(["update", ref.pfad, d]); return Promise.resolve() },
+  deleteDoc: ref => { schreib.push(["delete", ref.pfad]); datenbank.delete(ref.pfad); return Promise.resolve() },
   collection: stub, query: stub, where: stub, orderBy: stub, limit: stub,
   getDocs: () => Promise.resolve({ docs:[], forEach(){} }),
   onSnapshot: () => (()=>{}), serverTimestamp: () => 0, increment: n => n,
@@ -117,6 +144,97 @@ const gemerkt = {
 probe('kLadefehler',     () => run("kLadefehler(2)"));
 probe('loadSolution vorhanden', () => { if (run("typeof loadSolution") !== 'function') throw new Error('fehlt'); });
 probe('enterActive vorhanden',  () => { if (run("typeof enterActive")  !== 'function') throw new Error('fehlt'); });
+
+console.log('\nFreundschaftsanfragen:');
+run("profile = { username:'ich', usernameLower:'ich', friends:[] };");
+schreib.length = 0;
+datenbank.clear();
+
+// Anfrage stellen: darf ausschließlich das Anfragedokument schreiben.
+knoten('addUsername').value = 'snaefell';
+datenbank.set('usernames/snaefell', { uid:'du' });
+await run("$('btnAddFriend').onclick()");
+await new Promise(r => setTimeout(r, 0));
+
+probe('Anfrage legt genau ein Dokument an', () => {
+  if (schreib.length !== 1) throw new Error('erwartet 1 Schreibvorgang, waren ' + JSON.stringify(schreib));
+});
+probe('Anfrage landet beim Empfänger', () => {
+  const [art, pfad] = schreib[0];
+  if (art !== 'set' || pfad !== 'users/du/listfriendreqs/ich')
+    throw new Error('unerwartet: ' + art + ' ' + pfad);
+});
+probe('niemand wird ungefragt eingetragen', () => {
+  const eintrag = schreib.find(w => JSON.stringify(w[2] || '').includes('friends'));
+  if (eintrag) throw new Error('Freundesliste wurde ohne Ja verändert: ' + JSON.stringify(eintrag));
+});
+
+// Karte zeigt offene Anfragen und verschwindet wieder.
+probe('Karte bleibt ohne Anfragen versteckt', () => {
+  run("renderFriendReqs([])");
+  if (!knoten('freqCard').classList.contains('hidden')) throw new Error('Karte sichtbar');
+});
+probe('Karte zeigt zwei Anfragen', () => {
+  ctx.__reqs = [{ id:'du', fromName:'Snaefell' }, { id:'wer', fromName:'Jemand' }];
+  run("renderFriendReqs(__reqs)");
+  const k = knoten('freqCard');
+  if (k.classList.contains('hidden')) throw new Error('Karte versteckt');
+  const t = knoten('freqLabel').textContent;
+  if (!/2 Freundschaftsanfragen/.test(t)) throw new Error('Beschriftung: ' + t);
+  if (!knoten('freqList').innerHTML.includes('Snaefell')) throw new Error('Absender fehlt');
+});
+
+// Ja: trägt beide Seiten ein und räumt die Anfrage weg.
+schreib.length = 0;
+await run("acceptFriendReq('du')");
+await new Promise(r => setTimeout(r, 0));
+probe('Ja trägt beide Seiten ein', () => {
+  const ziele = schreib.filter(w => w[0] === 'update').map(w => w[1]);
+  if (!ziele.includes('users/ich') || !ziele.includes('users/du'))
+    throw new Error('nur ' + JSON.stringify(ziele));
+});
+probe('Ja löscht die Anfrage danach', () => {
+  const del = schreib.filter(w => w[0] === 'delete').map(w => w[1]);
+  if (!del.includes('users/ich/listfriendreqs/du')) throw new Error('nicht gelöscht: ' + JSON.stringify(del));
+  if (schreib.findIndex(w => w[0] === 'delete') < schreib.findIndex(w => w[0] === 'update'))
+    throw new Error('zuerst gelöscht, dann eingetragen — falsche Reihenfolge');
+});
+
+// Zweite Anfrage an dieselbe Person: nichts wird geschrieben.
+run("profile = { username:'ich', usernameLower:'ich', friends:[] };");
+datenbank.set('users/du/listfriendreqs/ich', { from:'ich' });
+schreib.length = 0;
+knoten('addUsername').value = 'snaefell';
+await run("$('btnAddFriend').onclick()");
+await new Promise(r => setTimeout(r, 0));
+probe('zweite Anfrage schreibt nichts', () => {
+  if (schreib.length) throw new Error('geschrieben: ' + JSON.stringify(schreib));
+});
+
+// Gegenanfrage liegt schon vor: das Hinzufügen ist dann das Ja.
+datenbank.clear();
+datenbank.set('usernames/snaefell', { uid:'du' });
+datenbank.set('users/ich/listfriendreqs/du', { from:'du' });
+schreib.length = 0;
+knoten('addUsername').value = 'snaefell';
+await run("$('btnAddFriend').onclick()");
+await new Promise(r => setTimeout(r, 40));
+probe('Gegenanfrage wird sofort angenommen', () => {
+  const ziele = schreib.filter(w => w[0] === 'update').map(w => w[1]);
+  if (!ziele.includes('users/ich') || !ziele.includes('users/du'))
+    throw new Error('nicht eingetragen: ' + JSON.stringify(schreib));
+  if (schreib.some(w => w[0] === 'set'))
+    throw new Error('zusätzliche Anfrage angelegt: ' + JSON.stringify(schreib));
+});
+
+// Nein: löscht nur, trägt nichts ein.
+schreib.length = 0;
+await run("declineFriendReq('wer')");
+await new Promise(r => setTimeout(r, 0));
+probe('Nein löscht nur', () => {
+  if (schreib.length !== 1 || schreib[0][0] !== 'delete')
+    throw new Error('unerwartet: ' + JSON.stringify(schreib));
+});
 
 console.log('\nMatchball-Banner:', gemerkt.match || '(leer)');
 console.log('Auflösungstitel :', gemerkt.titel);
