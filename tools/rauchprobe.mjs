@@ -190,6 +190,21 @@ function machBrett(zuEng){
   brett.passtAb = n => { brett.stufeGrenze = n; };
   return { brett, engerMachen: () => { ueberlauf = false } };
 }
+probe('sichtbareHoehe nimmt nicht die zu kleine Meldung', () => {
+  // Gerät meldet innerHeight zu klein; Dokument und Wurzel kennen die Wahrheit.
+  ctx.innerHeight = 812;
+  ctx.document.documentElement.clientHeight = 874;
+  const h = run("sichtbareHoehe()");
+  if (h !== 874) throw new Error('erwartet 874, war ' + h);
+});
+probe('sichtbareHoehe kommt auch ohne Dokumenthöhe aus', () => {
+  ctx.innerHeight = 800;
+  ctx.document.documentElement.clientHeight = 0;
+  const h = run("sichtbareHoehe()");
+  if (h !== 800) throw new Error('erwartet 800, war ' + h);
+  ctx.document.documentElement.clientHeight = 0;
+  ctx.innerHeight = 800;
+});
 probe('Höhe wird nachgezogen, wenn das Brett zu kurz ist', () => {
   const { brett } = machBrett(false);
   brett.getBoundingClientRect = () => ({ height: 700 });   // Fenster ist 800
