@@ -123,6 +123,8 @@ run("me = { uid:'ich' }; currentGame = __g; currentGameId = 'spiel1';"
   + "solutionCache.set('spiel1:r1', { top: __top.slice(0,5), values:{} });");
 
 let fehler = 0;
+ctx.__brett = null;
+const run2 = brett => { ctx.__brett = brett; run("passeBrettEin(__brett)"); };
 const probe = (name, fn) => {
   try { fn(); console.log('  ok   ', name); }
   catch(e){ fehler++; console.log('  FEHLER', name, '→', e.constructor.name + ': ' + e.message); }
@@ -144,6 +146,39 @@ const gemerkt = {
 probe('kLadefehler',     () => run("kLadefehler(2)"));
 probe('loadSolution vorhanden', () => { if (run("typeof loadSolution") !== 'function') throw new Error('fehlt'); });
 probe('enterActive vorhanden',  () => { if (run("typeof enterActive")  !== 'function') throw new Error('fehlt'); });
+
+console.log('\nEinpassen statt scrollen:');
+// Die Attrappe misst nicht wirklich; geprüft wird die Logik der Stufen.
+function machBrett(zuEng){
+  let ueberlauf = zuEng;
+  const kind = () => ({
+    get scrollHeight(){ return ueberlauf ? 200 : 100 },
+    get clientHeight(){ return 100 }
+  });
+  const pool = kind(), rows = kind();
+  const brett = el();
+  brett.querySelector = sel => sel === '.pool' ? pool : sel === '.board-rows' ? rows : null;
+  brett.passtAb = n => { brett.stufeGrenze = n; };
+  return { brett, engerMachen: () => { ueberlauf = false } };
+}
+probe('passt sofort: keine Stufe', () => {
+  const { brett } = machBrett(false);
+  run2(brett);
+  if ([...brett.klassen].length) throw new Error('Stufe gesetzt: ' + [...brett.klassen]);
+});
+probe('passt nie: letzte Stufe', () => {
+  const { brett } = machBrett(true);
+  run2(brett);
+  if (!brett.classList.contains('eng4')) throw new Error('Stufen: ' + [...brett.klassen]);
+  if ([...brett.klassen].length !== 1) throw new Error('mehrere Stufen zugleich: ' + [...brett.klassen]);
+});
+probe('zweiter Aufruf beginnt wieder bei null', () => {
+  const { brett, engerMachen } = machBrett(true);
+  run2(brett);
+  engerMachen();
+  run2(brett);
+  if ([...brett.klassen].length) throw new Error('Stufe blieb stehen: ' + [...brett.klassen]);
+});
 
 console.log('\nRundenbalken und Matchball:');
 probe('Balken färbt jede Runde nach Ausgang', () => {
