@@ -40,6 +40,17 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
+  /* Kein Gummiband-Effekt am Rand, auf keiner Seite. */
+  html{overscroll-behavior:none}
+  /* Während einer Partie ist das Dokument festgenagelt: Es gibt nichts
+     zu scrollen, nichts federt zurück, und die Adressleiste des Browsers
+     kann die Höhe nicht mehr verändern. Genau das ließ die Seite bisher
+     „wandern". Außerhalb des Spiels (Startseite, Shop, Trophäen) bleibt
+     alles normal scrollbar. */
+  body.imspiel{
+    position:fixed;inset:0;width:100%;
+    overflow:hidden;overscroll-behavior:none
+  }
   body{
     background:var(--ink);
     color:var(--paper);
@@ -239,6 +250,134 @@
   .rnd{flex:1;height:6px;border-radius:99px;background:var(--ink-3);overflow:hidden;display:block;position:relative}
   .rnd i{display:block;height:100%;width:0;background:var(--yellow);transition:width .7s cubic-bezier(.2,1.1,.3,1)}
   .rnd.now i{background:var(--orange)}
+  /* Ausgang der bereits gespielten Runden — dieselbe Zuordnung wie in
+     der Punktzeile darunter: Gelb bin ich, Hell ist der Gegner. */
+  .rnd.won i{background:var(--yellow)}
+  .rnd.lost i{background:var(--paper)}
+  .rnd.tie i{background:var(--muted)}
+
+  /* ---------- Matchball-Einblendung ----------
+     Rein schmückend: keine Klicks, keine Sperre, kein Knopf hängt daran.
+     Genau daran krankte das stufenweise Aufdecken früher — lief die
+     Abfolge im Hintergrund nicht zu Ende, blieb der Weiter-Knopf gesperrt.
+     Hier kann das nicht passieren: Die Einblendung liegt außerhalb jedes
+     Bedienwegs und verschwindet auch dann, wenn niemand hinsieht. */
+  /* ---------- Enger setzen statt scrollen ----------
+     Passt der Inhalt nicht auf den Bildschirm, schaltet passeBrettEin
+     stufenweise diese Klassen zu, bis er passt. Reine Größenangaben,
+     kein gemerkter Zustand: Jeder Neuaufbau fängt wieder bei Stufe null
+     an und kommt bei gleichem Inhalt zum gleichen Ergebnis. */
+  .board.eng1 .chip{min-height:32px;font-size:11px;padding:0 8px}
+  .board.eng1 .pool{gap:3px}
+  .board.eng1 .slot{height:38px}
+
+  .board.eng2 .chip{min-height:29px;font-size:10.5px;padding:0 7px}
+  .board.eng2 .pool{gap:3px}
+  .board.eng2 .slot{height:35px}
+  .board.eng2 .slot .rk{font-size:19px;width:25px}
+  .board.eng2 .slot .val{font-size:14.5px}
+  .board.eng2 .scoreline .num{font-size:28px}
+  .board.eng2 .qhead{font-size:15px}
+
+  .board.eng3 .chip{min-height:26px;font-size:10px;padding:0 6px}
+  .board.eng3 .pool{gap:3px}
+  .board.eng3 .slot{height:31px}
+  .board.eng3 .slot .rk{font-size:17px;width:23px}
+  .board.eng3 .slot .val{font-size:13.5px}
+  .board.eng3 .scoreline .num{font-size:24px}
+  .board.eng3 .scoreline .colon{font-size:14px;padding-bottom:8px}
+  .board.eng3 .qhead{font-size:14px}
+  .board.eng3 .qsub{font-size:10px}
+  .board.eng3 .turnbar{padding:4px 10px;font-size:9.5px;letter-spacing:.12em}
+  .board.eng3 .btn{padding:11px 18px}
+  .board.eng3 .board-foot .link{padding:3px 0;min-height:26px}
+
+  /* Letzte Stufe, für sehr kleine Geräte mit langen Kandidatennamen. */
+  .board.eng4 .chip{min-height:24px;font-size:9.5px;padding:0 5px;letter-spacing:0}
+  .board.eng4 .pool{gap:3px}
+  .board.eng4 .slot{height:27px}
+  .board.eng4 .slot .rk{font-size:15px;width:21px}
+  .board.eng4 .slot .val{font-size:12.5px}
+  .board.eng4 .scoreline .num{font-size:20px}
+  .board.eng4 .scoreline .colon{font-size:12px;padding-bottom:6px}
+  .board.eng4 .scoreline .who{font-size:9.5px}
+  .board.eng4 .qhead{font-size:13px}
+  .board.eng4 .qsub{font-size:9.5px}
+  .board.eng4 .turnbar{margin-top:5px;padding:3px 8px;font-size:9px;letter-spacing:.1em}
+  .board.eng4 .board-head{padding-bottom:7px}
+  .board.eng4 .board-mid{padding-top:4px}
+  .board.eng4 .btn{padding:10px 16px;font-size:12px}
+  .board.eng4 .board-foot .link{padding:2px 0;min-height:22px;font-size:.78rem}
+
+  /* Dieselben Stufen für die Auflösungskarte. Auch sie soll auf einen
+     Bildschirm passen, statt unter dem Daumen wegzuscrollen. */
+  .panel.eng1 .sheet-head{padding:13px 20px}
+  .panel.eng1 .sheet-head .title{font-size:32px;margin-top:5px}
+  .panel.eng1 .sheet-score{margin-top:9px}
+  .panel.eng1 .sheet-score .n{font-size:38px}
+  .panel.eng1 .dr{padding:7px 0}
+
+  .panel.eng2 .sheet-head{padding:10px 20px}
+  .panel.eng2 .sheet-head .title{font-size:26px;margin-top:4px}
+  .panel.eng2 .sheet-score{margin-top:7px}
+  .panel.eng2 .sheet-score .n{font-size:31px}
+  .panel.eng2 .sheet-score .l{font-size:10px;margin-top:4px}
+  .panel.eng2 .sheet-body{padding-top:8px}
+  .panel.eng2 .dr{padding:5px 0}
+  .panel.eng2 .dr .nm{font-size:14.5px}
+  .panel.eng2 .dr .de{font-size:11px}
+
+  .panel.eng3 .sheet-head{padding:8px 20px}
+  .panel.eng3 .sheet-head .title{font-size:22px;margin-top:3px}
+  .panel.eng3 .sheet-head .eyebrow{font-size:9.5px}
+  .panel.eng3 .sheet-score{margin-top:5px}
+  .panel.eng3 .sheet-score .n{font-size:26px}
+  .panel.eng3 .sheet-score .l{font-size:9.5px;margin-top:3px}
+  .panel.eng3 .sheet-body{padding-top:6px}
+  .panel.eng3 .dr{padding:3px 0}
+  .panel.eng3 .dr .nm{font-size:13.5px}
+  .panel.eng3 .dr .de{font-size:10.5px}
+  .panel.eng3 .dr .rk{font-size:17px}
+  .panel.eng3 .btn{padding:11px 18px}
+
+  .panel.eng4 .sheet-head{padding:6px 20px}
+  .panel.eng4 .sheet-head .title{font-size:19px;margin-top:2px}
+  .panel.eng4 .sheet-head .eyebrow{font-size:9px}
+  .panel.eng4 .sheet-score{margin-top:4px}
+  .panel.eng4 .sheet-score .n{font-size:22px}
+  .panel.eng4 .sheet-score .l{font-size:9px;margin-top:2px}
+  .panel.eng4 .sheet-body{padding-top:5px}
+  .panel.eng4 .dr{padding:2px 0}
+  .panel.eng4 .dr .nm{font-size:12.5px}
+  .panel.eng4 .dr .de{font-size:10px}
+  .panel.eng4 .dr .rk{font-size:15px}
+  .panel.eng4 .btn{padding:10px 16px;font-size:12px}
+
+  .mbflash{
+    position:fixed;inset:0;z-index:60;pointer-events:none;
+    display:none;align-items:center;justify-content:center;
+    background:rgba(8,13,46,.72)
+  }
+  .mbflash.an{display:flex;animation:mbWeg .35s ease 1.85s both}
+  .mbband{
+    width:100%;padding:22px 20px;text-align:center;
+    background:var(--yellow);color:var(--on-yellow);
+    animation:mbRein .42s cubic-bezier(.2,1.15,.3,1) both
+  }
+  .mbflash.gegner .mbband{background:var(--paper);color:var(--ink)}
+  .mbflash.beide  .mbband{background:var(--orange);color:var(--on-orange)}
+  .mbwort{
+    font:900 34px/1 var(--display);letter-spacing:-.03em;text-transform:uppercase
+  }
+  .mbwer{
+    margin-top:8px;font:700 12px var(--body);
+    letter-spacing:.2em;text-transform:uppercase
+  }
+  @keyframes mbRein{
+    0%{opacity:0;transform:translateY(18px) scaleY(.7)}
+    100%{opacity:1;transform:none}
+  }
+  @keyframes mbWeg{to{opacity:0}}
 
   .duel{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 14px}
   .duel .vs{font-size:.82rem;letter-spacing:.04em;color:var(--muted)}
@@ -368,18 +507,25 @@
   /* ══════════════════════════════════════════════════════════
      SPIELBRETT — beide Modi teilen sich diese Bausteine
      ══════════════════════════════════════════════════════════ */
-  /* Das Brett ist genau einen Bildschirm hoch. Frage, Antwortplätze und
-     Knopf sind damit immer gleichzeitig sichtbar; muss etwas weichen,
-     ist es die Kandidatenliste — und zwar in sich, nicht die ganze Seite.
-     Vorher wuchs die Seite über den Bildschirm hinaus und die klebende
-     Fußleiste legte sich über die letzten Plätze. */
+  /* Das Brett ist genau einen Bildschirm hoch — und zwar in svh, der
+     kleinsten Variante: Die gilt, wenn die Adressleiste sichtbar ist,
+     und ändert sich nicht mehr, wenn sie beim Wischen verschwindet. Mit
+     dvh sprang die Höhe genau dann, wenn man das Brett berührte.
+     Was nicht hineinpasst, wird kleiner gesetzt (siehe passeBrettEin),
+     nicht weggescrollt. */
   .board{
-    display:flex;flex-direction:column;height:100dvh;overflow:hidden;
+    display:flex;flex-direction:column;min-height:100svh;
     margin:
       calc(-22px - env(safe-area-inset-top))
       calc(-18px - env(safe-area-inset-right))
       calc(-34px - env(safe-area-inset-bottom))
       calc(-18px - env(safe-area-inset-left));
+  }
+  /* Nur die Bretter, auf denen gespielt wird, sind fest einen Bildschirm
+     hoch. Der Endstand mit seiner Rundentabelle darf weiterhin wachsen
+     und scrollen — dort stört es niemanden. */
+  #screen-round .board,#screen-alt .board,#screen-solo .board{
+    height:100svh;overflow:hidden
   }
   .board-head{
     background:var(--deep);flex:0 0 auto;
@@ -467,8 +613,10 @@
     color:var(--muted);margin-top:5px
   }
 
-  /* Die Kandidaten sind der einzige Teil, der nachgibt: Sie schrumpfen
-     zuerst und scrollen notfalls in sich. Alles andere bleibt stehen. */
+  /* Die Kandidaten bekommen den Rest der Höhe. Passen sie nicht, wird
+     nicht gescrollt, sondern kleiner gesetzt — siehe die Stufen eng1 bis
+     eng3 unten. Das overflow-y bleibt nur als letztes Netz, damit im
+     Extremfall nichts abgeschnitten wird. */
   .pool{
     display:flex;flex-wrap:wrap;align-content:flex-start;gap:4px;
     flex:1 1 0;min-height:36px;overflow-y:auto;overscroll-behavior:contain
@@ -526,7 +674,7 @@
   .sheet.on{display:block}
   .sheet .scrim{position:absolute;inset:0;background:rgba(5,7,26,.74)}
   .sheet .panel{
-    position:absolute;left:0;right:0;bottom:0;max-height:92dvh;overflow:auto;
+    position:absolute;left:0;right:0;bottom:0;max-height:100svh;overflow:auto;
     background:var(--ink);border-top:3px solid var(--yellow);
     padding:0 0 calc(20px + env(safe-area-inset-bottom));
     animation:sheetUp .62s cubic-bezier(.2,1.25,.3,1) both
@@ -1828,6 +1976,16 @@
 
 </div>
 
+<!-- Matchball-Einblendung. Liegt über allem, nimmt aber keine Klicks an
+     (pointer-events:none in der CSS-Regel). Selbst wenn sie durch einen
+     gedrosselten Zeitgeber hängen bliebe, kann sie nichts blockieren. -->
+<div id="mbFlash" class="mbflash" aria-hidden="true">
+  <div class="mbband">
+    <div class="mbwort">Matchball</div>
+    <div class="mbwer" id="mbWer">—</div>
+  </div>
+</div>
+
 
 <script type="module">
 /* ══════════════════════════════════════════════════════════════
@@ -1948,10 +2106,42 @@ function hinweisAnzeigen(msg){
   ziel.textContent = msg;
 }
 
+/* Bildschirme, die ein Spielbrett zeigen: Dort wird nicht gescrollt.
+   Alles andere (Startseite, Shop, Trophäen, Optionen) scrollt normal. */
 function show(id){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
-  $(id).classList.add("on");
-  window.scrollTo(0,0);
+  const ziel = $(id);
+  ziel.classList.add("on");
+
+  const gespielt = ["screen-round", "screen-alt", "screen-solo"].includes(id);
+  document.body.classList.toggle("imspiel", gespielt);
+  if (gespielt) passeBrettEin(ziel.querySelector(".board"));
+  else window.scrollTo(0,0);
+}
+
+/* ---------- Enger setzen statt scrollen ----------
+   Bleibt vom Inhalt mehr übrig, als auf den Bildschirm passt, wird er
+   schrittweise kleiner gesetzt, bis er passt — statt ihn wegzuscrollen.
+
+   Der Aufruf ist für sich genommen richtig und beliebig oft wiederholbar:
+   Er beginnt jedes Mal bei Stufe null und leitet die Stufe allein aus dem
+   ab, was gerade im Brett steht. Es wird nichts gemerkt, nichts gesperrt,
+   und ein Abbruch mittendrin hinterlässt höchstens eine Stufe zu wenig —
+   nie einen unbedienbaren Zustand. */
+const ENG_STUFEN = ["eng1", "eng2", "eng3", "eng4"];
+function passeBrettEin(brett){
+  if (!brett) return;
+  brett.classList.remove(...ENG_STUFEN);
+
+  const zuEng = () => {
+    const teile = [brett.querySelector(".pool"), brett.querySelector(".board-rows")];
+    return teile.some(t => t && t.scrollHeight > t.clientHeight + 1);
+  };
+  for (const stufe of ENG_STUFEN){
+    if (!zuEng()) return;
+    brett.classList.remove(...ENG_STUFEN);
+    brett.classList.add(stufe);
+  }
 }
 function esc(s){ return String(s??"").replace(/[<>&"]/g, c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c])); }
 const userRef = uid => doc(db,"users",uid);
@@ -3977,15 +4167,80 @@ function roundOutcome(i){
   let mp, op;
   const sol = solutionCache.get(currentGameId + ":" + key);
   const a = g.answers?.[key] || {};
-  if (sol && a[me.uid] && a[opp]){
+  if (modeOf(g) === "klassik" && sol && a[me.uid] && a[opp]){
     mp = scoreOf(a[me.uid], sol.top);
     op = scoreOf(a[opp], sol.top);
   } else {
-    mp = g.scores?.[key]?.[me.uid];
-    op = g.scores?.[key]?.[opp];
+    /* Abwechselnd legt die Rundenpunkte unter "points" ab, Klassik unter
+       "scores". Beides steht im Dokument — nichts wird gemerkt. */
+    const p = modeOf(g) === "wechsel" ? g.points?.[key] : g.scores?.[key];
+    mp = p?.[me.uid];
+    op = p?.[opp];
     if (mp === undefined || op === undefined) return null;
   }
   return mp > op ? "me" : op > mp ? "opp" : "draw";
+}
+
+/* ---------- Matchball ----------
+   Wer steht vor Runde n davor, das Spiel mit einem Sieg zu entscheiden?
+   Wie alles andere allein aus dem Spieldokument abgeleitet, deshalb
+   beliebig oft aufrufbar. Gibt "me", "opp", "beide" oder null zurück. */
+function matchballWer(n){
+  if (!currentGame || n <= 0 || n >= roundCount()) return null;
+  let mir = 0, ihm = 0;
+  for (let i = 0; i < n; i++){
+    const o = roundOutcome(i);
+    if (o === "me") mir++; else if (o === "opp") ihm++;
+  }
+  const zumSieg = Math.floor(roundCount() / 2) + 1;
+  const ichKann = mir === zumSieg - 1;
+  const erKann  = ihm === zumSieg - 1;
+  return ichKann && erKann ? "beide" : ichKann ? "me" : erKann ? "opp" : null;
+}
+
+function matchballText(wer){
+  return wer === "beide" ? "Matchball für beide"
+       : wer === "me"    ? "Dein Matchball"
+       : `Matchball für ${nameOf(oppUid())}`;
+}
+
+/* Kurze Einblendung zu Beginn einer Matchball-Runde.
+   Phase A wird bei jedem Schnappschuss durchlaufen, solange nicht
+   abgegeben ist — die Einblendung darf deshalb nur beim ersten Mal je
+   Runde kommen. Der Mindestabstand ist bewusst länger als jede Runde
+   dauert; wer lange überlegt, bekommt sie nicht mitten beim Tippen noch
+   einmal. Eine Sperre ist es trotzdem nicht: Der Schlüssel enthält die
+   Runde, und beim Verlassen des Spiels wird ohnehin alles zurückgesetzt.
+   Bliebe sie hängen, wäre nichts blockiert — sie nimmt keine Klicks an. */
+const MB_ABSTAND = 6 * 60 * 60 * 1000;   // praktisch: einmal je Runde
+let mbAus = null;
+function zeigeMatchball(n){
+  const wer = matchballWer(n);
+  const f = $("mbFlash");
+  if (!f) return;
+  if (!wer) return;
+  if (!darfWieder("mb:" + currentGameId + ":" + n, MB_ABSTAND)) return;
+
+  $("mbWer").textContent = matchballText(wer);
+  f.classList.remove("gegner", "beide");
+  if (wer === "opp")   f.classList.add("gegner");
+  if (wer === "beide") f.classList.add("beide");
+
+  f.classList.remove("an");
+  void f.offsetWidth;          // Neustart der Abfolge erzwingen
+  f.classList.add("an");
+
+  clearTimeout(mbAus);
+  mbAus = setTimeout(() => f.classList.remove("an"), 2200);
+}
+
+/* Sicherheitsnetz: Wird das Brett neu gezeichnet und die Einblendung
+   hängt noch (gedrosselter Zeitgeber im Hintergrund), verschwindet sie
+   hier. Sie hat ohnehin nie etwas blockiert — aber sichtbar bleiben soll
+   sie auch nicht. */
+function versteckeMatchball(){
+  clearTimeout(mbAus); mbAus = null;
+  $("mbFlash")?.classList.remove("an");
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -4023,11 +4278,16 @@ async function enterActive(gid){
     setWarten(false);
     closeSheet("sheet-reveal");
     kBrett(n, false);
+    /* Zum Schluss und ohne await: Das Brett steht schon, wenn die
+       Einblendung kommt, und selbst wenn sie ausbliebe, wäre alles
+       bedienbar. */
+    zeigeMatchball(n);
     return;
   }
 
   // ---- Phase B: auf den Gegner warten ----
   if (!theirs){
+    versteckeMatchball();
     setWarten(true);
     closeSheet("sheet-reveal");
     kEntwurf = mine.slice(); kEntwurfRunde = n;
@@ -4036,6 +4296,7 @@ async function enterActive(gid){
   }
 
   // ---- Phase C: beide fertig ----
+  versteckeMatchball();
   kEntwurf = mine.slice(); kEntwurfRunde = n;
 
   let sol = solutionCache.get(gid + ":" + key);
@@ -4116,14 +4377,16 @@ function kBrett(n, gesperrt, statusText){
          <span class="rk">${zz(i+1)}</span><span class="val">offen</span>
        </button>`).join("");
 
-  /* Gesetzte Kandidaten verschwinden aus der Liste, statt durchgestrichen
-     stehen zu bleiben — sie stehen ja eine Zeile weiter oben im Platz.
-     Die Liste wird dadurch mit jedem Zug kürzer statt länger. Der Modus
-     Abwechselnd macht das seit jeher so. */
-  const offen = (r.options || []).filter(o => !kEntwurf.includes(o));
-  $("optBox").innerHTML = offen.map(o =>
-    `<button class="chip" data-opt="${esc(o)}" ${gesperrt ? "disabled" : ""}>${esc(o)}</button>`
-  ).join("");
+  /* Gesetzte Kandidaten bleiben durchgestrichen an ihrem Platz stehen.
+     Sie herauszunehmen wäre kürzer, lässt aber bei jedem Zug die ganze
+     Liste umbrechen: Die Kandidaten springen unter dem Finger weg, und
+     das Befüllen fühlt sich hakelig an. Die Liste behält deshalb ihre
+     Anordnung von der ersten bis zur letzten Wahl. */
+  $("optBox").innerHTML = (r.options || []).map(o => {
+    const benutzt = kEntwurf.includes(o);
+    return `<button class="chip ${benutzt ? "used" : ""}" data-opt="${esc(o)}"
+              ${benutzt || gesperrt ? "disabled" : ""}>${esc(o)}</button>`;
+  }).join("");
 
   if (!gesperrt){
     $("slotBox").querySelectorAll("[data-slot]").forEach(b => b.onclick = () => {
@@ -4167,16 +4430,10 @@ function kAufloesung(n, sol, mine, theirs, bereit){
   $("revGold").textContent = (mp > op ? "+4" : "+0") + " Gold";
 
   // Matchball nur als Hinweis, ohne Einfluss auf die Bedienbarkeit
-  let vorMe = 0, vorOpp = 0;
-  for (let i = 0; i < n; i++){
-    const o = roundOutcome(i);
-    if (o === "me") vorMe++; else if (o === "opp") vorOpp++;
-  }
+  const mb = matchballWer(n + 1);
   const ban = $("revMatch");
-  if (vorMe === 2 || vorOpp === 2){
-    ban.textContent = vorMe === 2 && vorOpp === 2
-      ? "Matchball für beide"
-      : vorMe === 2 ? "Dein Matchball" : `Matchball für ${nameOf(opp)}`;
+  if (mb){
+    ban.textContent = matchballText(mb);
     ban.classList.remove("hidden");
   } else ban.classList.add("hidden");
 
@@ -4421,6 +4678,7 @@ $("btnRematch").onclick = async () => {
 
 async function leaveGame(){
   setWarten(false);
+  versteckeMatchball();
   altPickCand = null; altPickSlot = null; altRound = -1; altSolCache = null;
   altSeen = 0; altBusy = false; alleSheetsZu();
   if (unsubGame){ unsubGame(); unsubGame = null; }
@@ -5559,7 +5817,22 @@ const ROWH = 46;                       // muss zur Höhe von .slot passen
 const zz = n => String(n).padStart(2, "0");
 
 /* ---------- Sheets ---------- */
-function openSheet(id){ $(id).classList.add("on"); }
+function openSheet(id){
+  $(id).classList.add("on");
+  passeKarteEin($(id).querySelector(".panel"));
+}
+
+/* Wie passeBrettEin, nur für die Karten, die über das Brett fahren.
+   Ebenfalls bei jedem Aufruf von vorn und ohne gemerkten Zustand. */
+function passeKarteEin(panel){
+  if (!panel) return;
+  panel.classList.remove(...ENG_STUFEN);
+  for (const stufe of ENG_STUFEN){
+    if (panel.scrollHeight <= panel.clientHeight + 1) return;
+    panel.classList.remove(...ENG_STUFEN);
+    panel.classList.add(stufe);
+  }
+}
 function closeSheet(id){ $(id).classList.remove("on"); }
 function sheetOffen(id){ return $(id).classList.contains("on"); }
 function alleSheetsZu(){
@@ -5575,9 +5848,19 @@ function barHTML(n, boxId, numId){
   const anzahl = roundCount();
   const jetzt = punkteDieserRunde(n);
 
+  /* Jede gespielte Runde zeigt ihren Ausgang: gelb gewonnen, hell
+     verloren, gedämpft unentschieden. Vorher war jede beendete Runde
+     gelb gefüllt — das las sich, als hätte man alle gewonnen. Der
+     Ausgang wird wie alles andere aus dem Spieldokument abgeleitet. */
+  const wort = { me:"gewonnen", opp:"verloren", draw:"unentschieden" };
   box.innerHTML = Array.from({length: anzahl}, (_, i) => {
     const pct = i < n ? 100 : i === n ? Math.min(100, jetzt / 50 * 100) : 0;
-    return `<span class="rnd ${i === n ? "now" : ""}"><i style="width:${pct}%"></i></span>`;
+    const aus = i < n ? roundOutcome(i) : null;
+    const klasse = i === n ? "now"
+      : aus === "me" ? "won" : aus === "opp" ? "lost" : aus === "draw" ? "tie" : "";
+    const titel = i === n ? `Runde ${i+1}, läuft`
+      : aus ? `Runde ${i+1} ${wort[aus]}` : `Runde ${i+1}`;
+    return `<span class="rnd ${klasse}" title="${esc(titel)}"><i style="width:${pct}%"></i></span>`;
   }).join("");
 
   if (numId && $(numId)) $(numId).textContent = "R" + zz(n + 1);
@@ -5835,6 +6118,9 @@ function soloZeichnen(){
   const btn = $("btnSoloSubmit");
   btn.disabled = !voll;
   btn.textContent = voll ? "Abgeben" : "Alle fünf Plätze füllen";
+
+  // Wird ohne show() erneut gezeichnet, deshalb hier von Hand.
+  passeBrettEin($("screen-solo").querySelector(".board"));
 }
 
 /* ---------- Abgeben ---------- */

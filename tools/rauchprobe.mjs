@@ -123,6 +123,8 @@ run("me = { uid:'ich' }; currentGame = __g; currentGameId = 'spiel1';"
   + "solutionCache.set('spiel1:r1', { top: __top.slice(0,5), values:{} });");
 
 let fehler = 0;
+ctx.__brett = null;
+const run2 = brett => { ctx.__brett = brett; run("passeBrettEin(__brett)"); };
 const probe = (name, fn) => {
   try { fn(); console.log('  ok   ', name); }
   catch(e){ fehler++; console.log('  FEHLER', name, '→', e.constructor.name + ': ' + e.message); }
@@ -144,6 +146,91 @@ const gemerkt = {
 probe('kLadefehler',     () => run("kLadefehler(2)"));
 probe('loadSolution vorhanden', () => { if (run("typeof loadSolution") !== 'function') throw new Error('fehlt'); });
 probe('enterActive vorhanden',  () => { if (run("typeof enterActive")  !== 'function') throw new Error('fehlt'); });
+
+console.log('\nEinpassen statt scrollen:');
+// Die Attrappe misst nicht wirklich; geprüft wird die Logik der Stufen.
+function machBrett(zuEng){
+  let ueberlauf = zuEng;
+  const kind = () => ({
+    get scrollHeight(){ return ueberlauf ? 200 : 100 },
+    get clientHeight(){ return 100 }
+  });
+  const pool = kind(), rows = kind();
+  const brett = el();
+  brett.querySelector = sel => sel === '.pool' ? pool : sel === '.board-rows' ? rows : null;
+  brett.passtAb = n => { brett.stufeGrenze = n; };
+  return { brett, engerMachen: () => { ueberlauf = false } };
+}
+probe('passt sofort: keine Stufe', () => {
+  const { brett } = machBrett(false);
+  run2(brett);
+  if ([...brett.klassen].length) throw new Error('Stufe gesetzt: ' + [...brett.klassen]);
+});
+probe('passt nie: letzte Stufe', () => {
+  const { brett } = machBrett(true);
+  run2(brett);
+  if (!brett.classList.contains('eng4')) throw new Error('Stufen: ' + [...brett.klassen]);
+  if ([...brett.klassen].length !== 1) throw new Error('mehrere Stufen zugleich: ' + [...brett.klassen]);
+});
+probe('zweiter Aufruf beginnt wieder bei null', () => {
+  const { brett, engerMachen } = machBrett(true);
+  run2(brett);
+  engerMachen();
+  run2(brett);
+  if ([...brett.klassen].length) throw new Error('Stufe blieb stehen: ' + [...brett.klassen]);
+});
+
+console.log('\nRundenbalken und Matchball:');
+probe('Balken färbt jede Runde nach Ausgang', () => {
+  run("barHTML(2, 'rndBar', 'rndNum')");
+  const html = knoten('rndBar').innerHTML;
+  const treffer = [...html.matchAll(/class="rnd ([a-z]*)"/g)].map(m => m[1]);
+  // Runden 1 und 2 gewonnen, Runde 3 läuft, 4 und 5 offen
+  const soll = ['won','won','now','',''];
+  if (JSON.stringify(treffer) !== JSON.stringify(soll))
+    throw new Error('erwartet ' + JSON.stringify(soll) + ', war ' + JSON.stringify(treffer));
+});
+probe('Balken zeigt auch verlorene Runden', () => {
+  const alt = g.scores;
+  g.scores = { r0:{ich:50,du:10}, r1:{ich:0,du:50} };   // Runde 2 verloren
+  run("solutionCache.clear()");
+  run("barHTML(2, 'rndBar', 'rndNum')");
+  const treffer = [...knoten('rndBar').innerHTML.matchAll(/class="rnd ([a-z]*)"/g)].map(m => m[1]);
+  g.scores = alt;
+  if (treffer[1] !== 'lost') throw new Error('Runde 2 war ' + JSON.stringify(treffer));
+});
+probe('Matchball erst bei zwei Siegen', () => {
+  run("solutionCache.set('spiel1:r0', { top: __top.slice(0,5), values:{} })");
+  run("solutionCache.set('spiel1:r1', { top: __top.slice(0,5), values:{} })");
+  if (run("matchballWer(1)") !== null) throw new Error('nach einer Runde schon Matchball');
+  if (run("matchballWer(2)") !== 'me') throw new Error('nach zwei Siegen kein eigener Matchball');
+});
+probe('Matchball nicht in Runde 1 und nicht nach dem Spiel', () => {
+  if (run("matchballWer(0)") !== null) throw new Error('vor der ersten Runde');
+  if (run("matchballWer(5)") !== null) throw new Error('nach der letzten Runde');
+});
+probe('Einblendung blockiert nichts', () => {
+  run("zeigeMatchball(2)");
+  const f = knoten('mbFlash');
+  if (!f.classList.contains('an')) throw new Error('nicht eingeblendet');
+  if (knoten('mbWer').textContent !== 'Dein Matchball')
+    throw new Error('Text: ' + knoten('mbWer').textContent);
+  // Das Brett muss danach unverändert bedienbar sein
+  run("kBrett(2, false)");
+  if (knoten('btnSubmitList').disabled !== false && knoten('btnSubmitList').disabled !== true)
+    throw new Error('Knopf in unklarem Zustand');
+});
+probe('Einblendung springt nicht erneut an', () => {
+  run("versteckeMatchball()");
+  run("zeigeMatchball(2)");
+  if (knoten('mbFlash').classList.contains('an'))
+    throw new Error('zweite Einblendung derselben Runde');
+});
+probe('versteckeMatchball räumt auf', () => {
+  run("$('mbFlash').classList.add('an')");
+  run("versteckeMatchball()");
+  if (knoten('mbFlash').classList.contains('an')) throw new Error('blieb stehen');
+});
 
 console.log('\nFreundschaftsanfragen:');
 run("profile = { username:'ich', usernameLower:'ich', friends:[] };");

@@ -1,0 +1,264 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    // Gründer-Account plus alle nachträglich ernannten Administratoren.
+    function isAdmin() {
+      return signedIn() && (
+           exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usernameLower == 'dachsi'
+      );
+    }
+
+    match /admins/{uid} {
+      allow read:  if signedIn();     // damit der Client weiß, ob er das Fenster zeigt
+      allow write: if isAdmin();
+    }
+
+    // Archiv aller je vergebenen Wortpaare.
+    // Schreiben darf jeder Spieler (passiert beim Start einer Runde),
+    // lesen nur Admins — sonst könnte man aus dem eigenen Wort das
+    // des Gegners nachschlagen.
+    match /wordpairs/{key} {
+      allow read:          if isAdmin();
+      allow create, update: if signedIn();
+      allow delete:        if isAdmin();
+    }
+
+    // Reservierte Benutzernamen: jeder darf nachschlagen, niemand darf fremde ändern.
+    match /usernames/{name} {
+      allow read:   if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, delete: if request.auth.uid == uid;
+
+      // Eigenes Profil frei; Admins dürfen alle Profile ändern (Geschenke).
+      // Fremde Profile sonst nur, um sich selbst in deren Freundesliste
+      // einzutragen oder sich wieder daraus zu entfernen.
+      //
+      // ACHTUNG, offene Stelle: Das Eintragen setzt keine Einwilligung
+      // voraus. Wer eine fremde UID kennt, trägt sich hier selbst ein —
+      // an der Oberfläche vorbei. Die Bestätigung in List Duell ist
+      // deshalb bislang nur eine Sache des Clients.
+      //
+      // Zumachen ließe sich das mit der Zeile, die unten auskommentiert
+      // steht: eintragen darf nur, wer im eigenen Posteingang eine offene
+      // Anfrage der Gegenseite liegen hat. List Duell hält diese
+      // Reihenfolge bereits ein (erst beide Listen, dann die Anfrage
+      // löschen).
+      //
+      // Bevor die Zeile scharf geschaltet wird, muss das Schwesterspiel
+      // Imposter nachziehen: Es teilt sich dieses Feld und würde sonst
+      // beim Hinzufügen eines Freundes abgewiesen.
+      allow update: if request.auth.uid == uid
+        || isAdmin()
+        || (
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['friends'])
+          && (
+               // sich selbst hinzufügen
+               (  request.resource.data.friends.hasAll(resource.data.friends)
+               && request.resource.data.friends.hasAll([request.auth.uid])
+               && request.resource.data.friends.size() == resource.data.friends.size() + 1
+               // && exists(/databases/$(database)/documents/users/$(request.auth.uid)/listfriendreqs/$(uid))
+               )
+            || // sich selbst wieder entfernen
+               (  resource.data.friends.hasAll(request.resource.data.friends)
+               && !request.resource.data.friends.hasAny([request.auth.uid])
+               && request.resource.data.friends.size() == resource.data.friends.size() - 1 )
+             )
+        );
+
+      // Eingehende Herausforderungen
+      match /invites/{gameId} {
+        allow read:   if request.auth.uid == uid;
+        allow create: if signedIn() && request.resource.data.from == request.auth.uid;
+        allow delete: if request.auth.uid == uid || request.auth.uid == resource.data.from;
+        allow update: if false;
+      }
+
+      // Eingehende Herausforderungen für List Duell.
+      // Eigener Posteingang, damit die beiden Spiele sich nicht
+      // gegenseitig Einladungen in die Oberfläche schreiben.
+      match /listinvites/{gameId} {
+        allow read:   if request.auth.uid == uid;
+        allow create: if signedIn() && request.resource.data.from == request.auth.uid;
+        allow delete: if request.auth.uid == uid || request.auth.uid == resource.data.from;
+        allow update: if false;
+      }
+
+      // Offene Freundschaftsanfragen für List Duell.
+      // Die Dokument-Kennung ist die UID des Absenders. Dadurch kann
+      // niemand zweimal in derselben Liste stehen, und die Regel kommt
+      // ohne Blick in die Daten aus.
+      //
+      // Lesen darf der Empfänger (er beantwortet sie) und der Absender
+      // (er prüft, ob seine Anfrage noch offen ist). Löschen dürfen
+      // beide: der Empfänger mit Ja oder Nein, der Absender, wenn er es
+      // sich anders überlegt. Ändern darf niemand — eine Anfrage hat
+      // keinen Inhalt, der sich nachträglich sinnvoll ändern ließe.
+      match /listfriendreqs/{fromUid} {
+        allow read:   if request.auth.uid == uid || request.auth.uid == fromUid;
+        allow create: if signedIn()
+                      && request.auth.uid == fromUid
+                      && request.resource.data.from == request.auth.uid;
+        allow delete: if request.auth.uid == uid || request.auth.uid == fromUid;
+        allow update: if false;
+      }
+    }
+
+    match /games/{gameId} {
+      function game() {
+        return get(/databases/$(database)/documents/games/$(gameId)).data;
+      }
+
+      allow read: if signedIn() && request.auth.uid in resource.data.players;
+      allow create: if signedIn()
+        && request.auth.uid == request.resource.data.challenger
+        && request.resource.data.players.size() == 2
+        && request.auth.uid in request.resource.data.players
+        && request.resource.data.status == 'pending';
+      allow delete: if false;
+
+      // Beide Spieler dürfen den Status weiterschalten.
+      // Ein einmal abgegebener Worttipp lässt sich nicht mehr ändern —
+      // erst dadurch ist es sicher, dem Ratenden anschließend das Wort zu zeigen.
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.players
+        && request.resource.data.players == resource.data.players
+        && (
+             !('wordGuess' in resource.data)
+          || request.resource.data.wordGuess.text == resource.data.wordGuess.text
+        );
+
+      match /secrets/{docId} {
+        allow create: if signedIn() && request.auth.uid in game().players;
+
+        allow read: if signedIn() && (
+             // das eigene Wort
+             docId == request.auth.uid
+
+             // nur die Information "gleich oder nicht", sobald jemand getippt hat
+          || (docId == 'verdict'
+              && request.auth.uid in game().players
+              && game().status in ['guessing', 'checking', 'finished'])
+
+             // die vollständigen Wörter erst, wenn der Worttipp feststeht
+          || (docId == 'result'
+              && request.auth.uid in game().players
+              && game().status in ['checking', 'finished'])
+        );
+
+        allow update, delete: if false;
+      }
+    }
+
+    // Archiv aller je erzeugten Listen samt Lösung und Zahlenwerten.
+    // Es erspart den API-Aufruf: neue Spiele bedienen sich zuerst hier.
+    // Lesen darf nur, wer angemeldet ist — die Lösungen stehen darin im
+    // Klartext, sind aber nicht einer laufenden Runde zuzuordnen, weil
+    // die Auswahl erst beim Annehmen der Herausforderung fällt.
+    match /lists/{listId} {
+      allow read:           if signedIn();
+      allow create, update: if signedIn();
+      allow delete:         if isAdmin();
+    }
+
+    // Weltbestenliste des Einzelspiels. Ein Dokument je Spieler, in dem
+    // nur der eigene Bestwert steht. Lesen darf jeder Angemeldete,
+    // schreiben nur der Spieler selbst — und nur seinen eigenen Eintrag.
+    match /soloscores/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.streak is int
+        && request.resource.data.streak >= 0
+        && request.resource.data.streak <= 500;
+      allow delete: if isAdmin();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // List Duell — fünf Runden, in denen beide Spieler dieselbe
+    // Top-5-Liste sortieren. Eigene Ablage, damit ein laufendes
+    // Imposter-Duell davon unberührt bleibt.
+    // ══════════════════════════════════════════════════════════════
+    match /listgames/{gameId} {
+      function listGame() {
+        return get(/databases/$(database)/documents/listgames/$(gameId)).data;
+      }
+      function myUid() { return request.auth.uid; }
+      function otherUid() {
+        return resource.data.players[0] == myUid()
+             ? resource.data.players[1]
+             : resource.data.players[0];
+      }
+
+      // Für eine Runde gilt: die Antwort des Gegners rühre ich nicht an,
+      // und meine eigene bleibt stehen, sobald sie einmal abgegeben ist.
+      // Ohne diese Sperre könnte jemand eine fremde Antwort erfinden und
+      // damit die Lösung vorzeitig freischalten — oder nach dem Aufdecken
+      // noch nachbessern.
+      function roundUntouched(r) {
+        return resource.data.answers.get(r, {}).get(otherUid(), [])
+            == request.resource.data.answers.get(r, {}).get(otherUid(), [])
+          && (
+               !resource.data.answers.get(r, {}).keys().hasAny([myUid()])
+            || resource.data.answers.get(r, {}).get(myUid(), [])
+               == request.resource.data.answers.get(r, {}).get(myUid(), [])
+             );
+      }
+
+      // Beteiligte sehen ihr Spiel, Admins die Übersicht im Adminfenster.
+      // Die Lösungen liegen in der Unterkollektion und bleiben auch für
+      // Admins gesperrt — sie stehen ohnehin im Archiv.
+      allow read: if signedIn()
+        && (request.auth.uid in resource.data.players || isAdmin());
+      allow create: if signedIn()
+        && request.auth.uid == request.resource.data.challenger
+        && request.resource.data.players.size() == 2
+        && request.auth.uid in request.resource.data.players
+        && request.resource.data.status == 'pending';
+      allow delete: if false;
+
+      // Beide Spieler schalten Runde und Status weiter, geben ihre Liste
+      // ab und melden sich für die nächste Runde bereit.
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.players
+        && request.resource.data.players == resource.data.players
+        && roundUntouched('r0')
+        && roundUntouched('r1')
+        && roundUntouched('r2')
+        && roundUntouched('r3')
+        && roundUntouched('r4');
+
+      match /secrets/{roundId} {
+        // Angelegt werden alle Lösungen einmalig von dem Spieler,
+        // der die Herausforderung annimmt.
+        allow create: if signedIn() && request.auth.uid in listGame().players;
+
+        // Klassik: lesbar erst, wenn BEIDE für diese Runde abgegeben haben.
+        // Vorher kommt niemand an die richtige Reihenfolge.
+        //
+        // Abwechselnd: dort wird jeder einzelne Zug sofort bewertet, also
+        // muss die Lösung während der Runde auf beiden Geräten liegen.
+        // Das lässt sich mit Regeln nicht verhindern — wer will, kann sie
+        // in der Entwicklerkonsole nachschlagen. Wollte man das ausschließen,
+        // müsste die Bewertung in eine Serverfunktion wandern.
+        allow read: if signedIn()
+          && request.auth.uid in listGame().players
+          && (
+               listGame().mode == 'wechsel'
+            || listGame().answers.get(roundId, {}).keys().hasAll(listGame().players)
+             );
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}
