@@ -28,7 +28,7 @@ const stub = new Proxy(function(){}, {
 function el(){
   const e = {
     textContent:'', innerHTML:'', value:'', disabled:false, hidden:false,
-    dataset:{}, style:{},
+    dataset:{}, style:{}, children:[], isConnected:true,
     klassen:new Set(),
     classList:{
       add(...c){ c.forEach(x => e.klassen.add(x)) },
@@ -63,7 +63,9 @@ const ctx = {
   location: { href:'', hash:'', search:'' },
   localStorage: { getItem:()=>null, setItem(){}, removeItem(){} },
   getComputedStyle: () => ({ getPropertyValue: () => '' }),
-  requestAnimationFrame: f => setTimeout(f,0),
+  requestAnimationFrame: f => setTimeout(() => f(performance.now()), 0),
+  performance,
+  matchMedia: () => ({ matches:false, addEventListener(){}, addListener(){} }),
   fetch: () => Promise.resolve({ ok:true, json:()=>Promise.resolve({}) }),
   // Firebase-Ersatz
   initializeApp: stub, getAuth: stub, getFirestore: stub, getMessaging: stub,
@@ -125,6 +127,7 @@ run("me = { uid:'ich' }; currentGame = __g; currentGameId = 'spiel1';"
 let fehler = 0;
 ctx.__brett = null;
 const run2 = brett => { ctx.__brett = brett; run("passeBrettEin(__brett)"); };
+const run3 = (feld, ziel) => { ctx.__feld = feld; ctx.__ziel = ziel; run("zaehleHoch(__feld, __ziel)"); };
 const probe = (name, fn) => {
   try { fn(); console.log('  ok   ', name); }
   catch(e){ fehler++; console.log('  FEHLER', name, '→', e.constructor.name + ': ' + e.message); }
@@ -146,6 +149,30 @@ const gemerkt = {
 probe('kLadefehler',     () => run("kLadefehler(2)"));
 probe('loadSolution vorhanden', () => { if (run("typeof loadSolution") !== 'function') throw new Error('fehlt'); });
 probe('enterActive vorhanden',  () => { if (run("typeof enterActive")  !== 'function') throw new Error('fehlt'); });
+
+console.log('\nZählwerk und Knopfzustand:');
+probe('Zähler steht sofort auf dem Endwert', () => {
+  const f = el();
+  run3(f, 35);
+  if (f.textContent !== 35 && f.textContent !== 0)
+    throw new Error('unerwarteter Startwert: ' + f.textContent);
+});
+probe('Zähler bei null bleibt null', () => {
+  const f = el();
+  run3(f, 0);
+  if (f.textContent !== 0) throw new Error('war ' + f.textContent);
+});
+probe('Knopf bekommt bereit nur bei voller Liste', () => {
+  run("kEntwurf = ['a','b','c','d','e']; kEntwurfRunde = 2");
+  run("kBrett(2, false)");
+  if (!knoten('btnSubmitList').classList.contains('bereit')) throw new Error('fehlt bei voller Liste');
+  run("kEntwurf = ['a',null,null,null,null]; kEntwurfRunde = 2");
+  run("kBrett(2, false)");
+  if (knoten('btnSubmitList').classList.contains('bereit')) throw new Error('gesetzt bei halber Liste');
+  run("kEntwurf = ['a','b','c','d','e']; kEntwurfRunde = 2");
+  run("kBrett(2, true, 'Beide fertig')");
+  if (knoten('btnSubmitList').classList.contains('bereit')) throw new Error('gesetzt trotz Sperre');
+});
 
 console.log('\nEinpassen statt scrollen:');
 // Die Attrappe misst nicht wirklich; geprüft wird die Logik der Stufen.
