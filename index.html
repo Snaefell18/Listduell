@@ -450,7 +450,10 @@
     font:600 12.5px var(--body);text-transform:uppercase;letter-spacing:0;
     transition:transform .12s ease
   }
+  .chip:not(:disabled):active{transform:scale(.93);border-color:var(--yellow)}
   .chip.used{opacity:.28;text-decoration:line-through}
+  /* Der eben verbrauchte Kandidat zieht sich sichtbar zurück. */
+  .chip.weg{animation:chipWeg .42s cubic-bezier(.3,1.2,.4,1) both}
   .chip.sel,.chip.pick{
     background:var(--yellow);border-color:var(--yellow);color:var(--on-yellow);transform:scale(1.06)
   }
@@ -567,16 +570,32 @@
   .board-rows{flex:0 1 auto;min-height:0;overflow-y:auto;padding:8px var(--rand) 8px;position:relative}
   /* Die Aktion klebt unten am Bildschirmrand. Reicht der Platz nicht,
      scrollt der Inhalt darüber weg — der Knopf bleibt erreichbar. */
+  /* margin-top:auto drückt die Fußleiste in jedem Fall an den unteren
+     Rand — auch dann, wenn oben etwas nicht wächst wie gedacht. Der
+     Knopf und die Abbrechen-Zeile schließen damit bündig mit dem
+     Geräterand ab, nur der Home-Balken bleibt frei. */
   .board-foot{
-    background:var(--deep);flex:1 1 auto;min-height:0;
+    background:var(--deep);flex:1 1 auto;min-height:0;margin-top:auto;
     display:flex;flex-direction:column;justify-content:flex-end;z-index:5;
-    padding:10px var(--rand) 12px
+    padding:10px var(--rand) 4px
   }
   /* Der Endstand liegt nicht als eigene Ebene über dem Bildschirm und
      bekommt den Geräteabstand deshalb hier. */
   #screen-final .board-foot{padding-bottom:calc(12px + var(--sab))}
   .board-foot .btn,.board-foot .link{flex:0 0 auto}
-  .board-foot .link{padding:8px 0;min-height:36px}
+  /* Sobald die Liste vollständig ist, pocht der Knopf leicht und ein
+     Glanz läuft einmal darüber. Rein optisch — er ist ohnehin schon
+     bedienbar, es hängt nichts daran. */
+  .btn.bereit{
+    animation:bereitPuls 1.6s ease-in-out infinite;
+    position:relative;overflow:hidden
+  }
+  .btn.bereit::after{
+    content:"";position:absolute;top:0;bottom:0;width:38%;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.42),transparent);
+    animation:shine 1.6s ease-in-out infinite
+  }
+  .board-foot .link{padding:7px 0;min-height:34px}
 
   .bar-line{display:flex;align-items:center;gap:8px}
   .bar-line .mode{
@@ -594,7 +613,7 @@
   .scoreline .side.right{text-align:right}
   .scoreline .numwrap{position:relative;display:inline-block}
   .scoreline .num{
-    font:900 52px/.86 var(--display);letter-spacing:-.045em;color:var(--yellow)
+    font:900 68px/.84 var(--display);letter-spacing:-.05em;color:var(--yellow)
   }
   .scoreline .side.right .num{color:var(--paper)}
   .scoreline .num.bump{animation:tickBump .55s cubic-bezier(.2,1.4,.3,1) both}
@@ -602,7 +621,7 @@
   .scoreline .side.right .wholine{text-align:right}
   .scoreline .who{
     display:inline-block;
-    font:600 11px var(--body);letter-spacing:.14em;text-transform:uppercase
+    font:700 12px var(--body);letter-spacing:.14em;text-transform:uppercase
   }
   .scoreline .side.right .who{color:var(--muted)}
   .scoreline .who b{color:var(--orange);font-weight:600}
@@ -630,7 +649,7 @@
   @keyframes pip{0%,100%{opacity:1}50%{opacity:.25}}
   @keyframes markIn{0%{opacity:0;transform:translateX(26px)}100%{opacity:1;transform:none}}
   @keyframes markInRight{0%{opacity:0;transform:translateX(-26px)}100%{opacity:1;transform:none}}
-  .scoreline .colon{font:900 24px/1 var(--display);color:var(--dim);padding-bottom:20px}
+  .scoreline .colon{font:900 28px/1 var(--display);color:var(--dim);padding-bottom:26px}
 
   .turnbar{
     margin-top:14px;padding:9px 12px;text-align:center;
@@ -785,7 +804,25 @@
      Ein iPhone 16 Pro bekommt damit wieder die vollen Größen. */
 
   @keyframes popRise{0%{opacity:0;transform:translate(-50%,6px) scale(.4) rotate(-8deg)}30%{opacity:1;transform:translate(-50%,-14px) scale(1.35) rotate(3deg)}55%{transform:translate(-50%,-20px) scale(1)}100%{opacity:0;transform:translate(-50%,-58px) scale(.9)}}
-  @keyframes lockIn{0%{transform:translateX(14px) scale(.97);background:var(--yellow)}45%{transform:translateX(0) scale(1.02)}100%{transform:none}}
+  @keyframes lockIn{
+    0%{transform:translateX(20px) scale(.94);background:var(--yellow)}
+    35%{transform:translateX(-3px) scale(1.06);background:var(--yellow)}
+    60%{transform:translateX(0) scale(1.02)}
+    100%{transform:none}
+  }
+  @keyframes chipWeg{
+    0%{transform:scale(1);opacity:1}
+    40%{transform:scale(1.16);opacity:1;border-color:var(--yellow)}
+    100%{transform:scale(1);opacity:.28}
+  }
+  /* Der Knopf meldet sich, sobald alle fünf Plätze stehen. */
+  @keyframes bereitPuls{
+    0%,100%{transform:none;box-shadow:0 0 0 0 rgba(255,201,60,0)}
+    50%{transform:scale(1.018);box-shadow:0 0 0 6px rgba(255,201,60,.16)}
+  }
+  @keyframes zaehlerPop{
+    0%{transform:scale(1)}40%{transform:scale(1.16)}100%{transform:scale(1)}
+  }
   @keyframes shine{0%{transform:translateX(-120%)}100%{transform:translateX(220%)}}
   @keyframes tickBump{0%{transform:scale(1)}35%{transform:scale(1.28)}70%{transform:scale(.97)}100%{transform:scale(1)}}
   @keyframes sparkOut{0%{opacity:1;transform:translate(-50%,-50%) rotate(var(--a)) translateY(0) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--a)) translateY(-64px) scale(.4)}}
@@ -4184,6 +4221,31 @@ function roundOutcome(i){
   return mp > op ? "me" : op > mp ? "opp" : "draw";
 }
 
+/* Lässt eine Zahl hochlaufen. Der Endwert steht sofort im Feld — läuft
+   die Abfolge nicht (Fenster im Hintergrund, Bewegung abgeschaltet), ist
+   trotzdem der richtige Wert zu sehen. Danach zählt sie nur noch optisch
+   von null herauf und schreibt zum Schluss denselben Wert erneut. */
+function zaehleHoch(feld, ziel, dauer = 620){
+  if (!feld) return;
+  feld.textContent = ziel;
+  if (!ziel) return;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+
+  clearTimeout(feld._zaehler);
+  const start = performance.now();
+  const schritt = jetzt => {
+    const t = Math.min(1, (jetzt - start) / dauer);
+    const weich = 1 - Math.pow(1 - t, 3);
+    feld.textContent = Math.round(ziel * weich);
+    if (t < 1) requestAnimationFrame(schritt);
+    else feld.textContent = ziel;
+  };
+  feld.textContent = 0;
+  requestAnimationFrame(schritt);
+  // Netz für den Fall, dass die Abfolge nie zu Ende läuft.
+  feld._zaehler = setTimeout(() => { feld.textContent = ziel; }, dauer + 400);
+}
+
 /* ---------- Matchball ----------
    Wer steht vor Runde n davor, das Spiel mit einem Sieg zu entscheiden?
    Wie alles andere allein aus dem Spieldokument abgeleitet, deshalb
@@ -4399,10 +4461,17 @@ function kBrett(n, gesperrt, statusText){
     $("optBox").querySelectorAll("[data-opt]").forEach(b => b.onclick = () => {
       const i = kEntwurf.findIndex(x => x === null);
       if (i === -1) return;
-      kEntwurf[i] = b.dataset.opt;
+      const gewaehlt = b.dataset.opt;
+      kEntwurf[i] = gewaehlt;
       kBrett(n, false);
+
       const row = $("slotBox").children[i];
       if (row){ row.classList.add("lock"); setTimeout(() => row.classList.remove("lock"), 700); }
+      /* Derselbe Kandidat im neu gezeichneten Feld, jetzt durchgestrichen.
+         Über den Datenwert gesucht statt über einen Selektor — Namen wie
+         „Côte d'Ivoire" würden jeden Selektor zerlegen. */
+      const weg = [...$("optBox").children].find(c => c.dataset.opt === gewaehlt);
+      if (weg){ weg.classList.add("weg"); setTimeout(() => weg.classList.remove("weg"), 500); }
     });
   }
 
@@ -4410,6 +4479,8 @@ function kBrett(n, gesperrt, statusText){
   const btn = $("btnSubmitList");
   btn.disabled = gesperrt || !voll;
   btn.textContent = gesperrt ? "Abgegeben" : voll ? "Liste abgeben" : "Alle fünf Plätze füllen";
+  // Nur Optik: Der Knopf ist ohnehin bedienbar, es hängt nichts daran.
+  btn.classList.toggle("bereit", voll && !gesperrt);
 
   show("screen-round");
 }
@@ -4427,8 +4498,8 @@ function kAufloesung(n, sol, mine, theirs, bereit){
 
   $("revLabel").textContent = `Runde ${zz(n+1)}`;
   $("revTitle").textContent = mp > op ? "Gewonnen!" : mp < op ? "Verloren." : "Gleichstand";
-  $("revMe").textContent = mp;
-  $("revOpp").textContent = op;
+  zaehleHoch($("revMe"), mp);
+  zaehleHoch($("revOpp"), op);
   $("revOppName").textContent = nameOf(opp);
   $("revGold").textContent = (mp > op ? "+4" : "+0") + " Gold";
 
@@ -4454,6 +4525,22 @@ function kAufloesung(n, sol, mine, theirs, bereit){
       <span class="pt ${cls}">+${p}</span>
     </div>`;
   }).join("");
+
+  /* Funken und Punkte-Badge auf den Volltreffern, versetzt zur
+     Einblendung der Zeile. Rein schmückend und ohne Aufräumzwang: Die
+     Elemente entfernen sich selbst, und wird die Auflösung vorher neu
+     gezeichnet, sind sie mitsamt der alten Zeile verschwunden. */
+  [...$("revList").children].forEach((row, i) => {
+    const p = pointsFor(mine[i], i, sol.top);
+    if (!p) return;
+    setTimeout(() => {
+      if (!row.isConnected) return;
+      if (p === 10){ addShine(row); addSparks(row); }
+      popBadge(row.querySelector(".pt"), "+" + p,
+        p === 10 ? "var(--yellow)" : "var(--orange)",
+        p === 10 ? "var(--on-yellow)" : "var(--on-orange)");
+    }, 260 + i * 130);
+  });
 
   $("revNote").textContent = sol.note || "";
   $("revDecide").classList.add("hidden");
