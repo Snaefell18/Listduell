@@ -57,7 +57,11 @@
      alles normal scrollbar. */
   body.imspiel{
     position:fixed;inset:0;width:100%;
-    overflow:hidden;overscroll-behavior:none
+    overflow:hidden;overscroll-behavior:none;
+    /* Während einer Partie liegt hinter dem Brett dieselbe Farbe wie in
+       Kopf und Fuß. Sollte am unteren Rand doch einmal ein Streifen frei
+       bleiben, fällt er nicht als hellerer Balken auf. */
+    background:var(--deep)
   }
   body{
     background:var(--ink);
