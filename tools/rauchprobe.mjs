@@ -40,6 +40,7 @@ function el(){
     addEventListener(){}, removeEventListener(){}, appendChild(){}, remove(){},
     querySelectorAll(){ return [] }, querySelector(){ return el() },
     focus(){}, click(){}, setAttribute(){}, getAttribute(){return null},
+    getBoundingClientRect(){ return { top:0, left:0, right:0, bottom:0, width:0, height:0 } },
     closest(){ return null }, scrollIntoView(){}, animate(){ return {finished:Promise.resolve()} }
   };
   return e;
@@ -65,6 +66,7 @@ const ctx = {
   getComputedStyle: () => ({ getPropertyValue: () => '' }),
   requestAnimationFrame: f => setTimeout(() => f(performance.now()), 0),
   performance,
+  innerHeight: 800, innerWidth: 402,
   matchMedia: () => ({ matches:false, addEventListener(){}, addListener(){} }),
   fetch: () => Promise.resolve({ ok:true, json:()=>Promise.resolve({}) }),
   // Firebase-Ersatz
@@ -188,6 +190,18 @@ function machBrett(zuEng){
   brett.passtAb = n => { brett.stufeGrenze = n; };
   return { brett, engerMachen: () => { ueberlauf = false } };
 }
+probe('Höhe wird nachgezogen, wenn das Brett zu kurz ist', () => {
+  const { brett } = machBrett(false);
+  brett.getBoundingClientRect = () => ({ height: 700 });   // Fenster ist 800
+  run2(brett);
+  if (brett.style.height !== '800px') throw new Error('nicht nachgezogen: ' + brett.style.height);
+});
+probe('Höhe bleibt unangetastet, wenn sie stimmt', () => {
+  const { brett } = machBrett(false);
+  brett.getBoundingClientRect = () => ({ height: 800 });
+  run2(brett);
+  if (brett.style.height) throw new Error('unnötig gesetzt: ' + brett.style.height);
+});
 probe('passt sofort: keine Stufe', () => {
   const { brett } = machBrett(false);
   run2(brett);
